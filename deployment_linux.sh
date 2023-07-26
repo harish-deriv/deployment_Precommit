@@ -35,7 +35,7 @@ echo '#!/bin/sh
 if [ -x .git/hooks/pre-commit ]; then
     .git/hooks/pre-commit || exit $?
 fi
-trufflehog filesystem ./ --no-update > trufflehog_output.json
+trufflehog git file://. --since-commit HEAD --only-verified --fail --no-update > trufflehog_output.json
 if [ -s trufflehog_output.json ]
 then
     cat trufflehog_output.json
@@ -51,7 +51,7 @@ echo '#!/bin/sh
 if [ -x .git/hooks/pre-push ]; then
     .git/hooks/pre-push || exit $?
 fi
-trufflehog filesystem ./ --no-update > trufflehog_output.json
+trufflehog git file://. --since-commit HEAD --only-verified --fail --no-update > trufflehog_output.json
 if [ -s trufflehog_output.json ]
 then
     cat trufflehog_output.json
