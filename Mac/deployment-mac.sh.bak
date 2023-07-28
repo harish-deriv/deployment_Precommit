@@ -1,0 +1,157 @@
+#!/bin/bash
+
+# Determine the architecture of the device
+## This is no longer needed as trufflehog is installed using `brew`
+# if [ "$(uname -m)" == "x86_64" ]; then
+#     ARCH="amd64"
+# elif [ "$(uname -m)" == "arm64" ]; then
+#     ARCH="arm64"
+# else
+#     echo "Error: Unsupported architecture $(uname -m)."
+#     exit 1
+# fi
+
+echo '[1] Creating /etc/skel/.git/hooks'
+mkdir -p /etc/skel/.git/hooks
+echo '[A] /etc/skel/.git/hooks Created'
+
+# Check if brew is installed 
+if [[ -x /usr/local/bin/brew ]] || [[ -x /opt/homebrew/bin/brew ]] || [[ -x /usr/local/Homebrew/bin/brew ]]; then
+    echo "[2] Brew is not installed - Installing Now..."
+    # Installing Brew
+    curl https://raw.githubusercontent.com/kandji-inc/support/main/Scripts/InstallHomebrew.zsh > /tmp/kandji-brew-installation.sh
+    interpreter='#!/bin/bash'
+    sed -i "1s+.*+$interpreter+" kandji-brew-installation.sh
+    /bin/bash /tmp/kandji-brew-installation.sh
+    echo "[B] Brew installation Completed..."
+fi
+
+# this command would fail, as `git` binary 
+if ! command -v git &> /dev/null; then
+    echo "[3] Git not found, Installing Git."
+    brew install git
+    echo "[C] Git installation completed."
+fi
+
+# Download Trufflehog if it's not already installed
+if ! command -v trufflehog &> /dev/null; then
+    echo "[5] Downloading Trufflehog..."
+    brew install trufflehog
+    echo "[D] Trufflehog Downloaded"
+fi
+
+# Add Trufflehog pre-commit hook
+echo "[6] Generating Pre-Commit File..."
+
+echo '#!/bin/sh
+# Look for a local pre-commit hook in the repository
+if [ -x .git/hooks/pre-commit ]; then
+    .git/hooks/pre-commit || exit $?
+fi
+
+# Look for a local husky pre-commit hook in the repository
+if [ -x .husky/pre-commit ]; then
+    .git/hooks/pre-commit || exit $?
+fi
+
+trufflehog git file://. --since-commit HEAD > trufflehog_output.json
+if [ -s trufflehog_output.json ]
+then
+    cat trufflehog_output.json
+    rm trufflehog_output.json
+    echo "TruffleHog found secrets. Aborting commit."
+    exit 1
+fi
+rm trufflehog_output.json' > /etc/skel/.git/hooks/pre-commit
+
+# Make the hooks executable
+chmod +x /etc/skel/.git/hooks/pre-commit
+
+echo '[E] Pre-Commit File generated under /etc/skel/.git/hooks/pre-commit'
+
+
+# Loop through all user directories and create a symbolic link to the global hooks
+# If it doens't work, we'll just place the precommit in all user home dir
+#hookspath=
+echo "[7] Configuring pre-commit configuration for all users"
+basepath="/Users"
+users=$(ls /Users/ | grep -vi "shared")
+for user in $users; do
+    homedir=$basepath/$user
+    echo "/-------Configuring for ${homedir}-------/"
+
+    hookspath=$(sudo -u $user git config --get core.hooksPath)
+    if [ -d "${hookspath}" ]; then
+        # This is appending trufflehog's pre-commit to existing pre-commit
+        echo "User $user with hookspath $hookspath" 
+        if [ -f "${hookspath}/pre-commit"]; then
+            sudo -u "$user" bash -c "echo '\n' >> '${hookspath}/pre-commit'" 
+            sudo -u "$user" bash -c "cat /etc/skel/.git/hooks/pre-commit >> '${hookspath}/pre-commit'"
+        else
+            sudo -u "$user" bash -c "touch '${hookspath}/pre-commit'"
+            sudo -u "$user" bash -c "ln -sf /etc/skel/.git/hooks/pre-commit '${user}/.git/hooks/pre-commit'"
+        fi
+    else
+        echo "$user does not have hook path configured" 
+        sudo -u "$user" bash -c "git config --global core.hooksPath '${user}/.git/hooks/'"  # Configuring hookPath
+        sudo -u "$user" bash -c "mkdir -p '${user}/.git/hooks'" # create hookPath directory 
+        sudo -u "$user" bash -c "touch '${user}/.git/hooks/pre-commit'" # creating pre-commit file in created hookPath directory 
+        sudo -u "$user" bash -c "ln -sf /etc/skel/.git/hooks/pre-commit '${user}/.git/hooks/pre-commit'"
+    fi
+
+    echo "/-------Configuration Completed for ${homedir}-------/"
+done
+echo "[F] pre-commit configuration completed for all users"
+
+echo "[8] Configuring pre-commit configuration for Root user"
+# Root user if in case they use root for commits
+hookspath=$(sudo git config --get core.hooksPath)
+if [ -d "${hookspath}" ]; then
+    if [ -f "${hookspath}/pre-commit"]; then
+      echo "\n" >> "${hookspath}/pre-commit" 
+      cat /etc/skel/.git/hooks/pre-commit >> "${hookspath}/pre-commit"
+    else
+        touch "${hookspath}/pre-commit"
+        ln -sf /etc/skel/.git/hooks/pre-commit "/var/root/.git/hooks/pre-commit"
+    fi
+else
+    git config --global core.hooksPath /var/root/.git/hooks/
+    mkdir -p /var/root/.git/hooks
+fi
+echo "[G] pre-commit configuration completed for Root user"
+
+# Test the pre-commit and pre-push hooks if secret not detected it sends a POST request to server indicating the user 
+#### REPLACE REPO WITH ORG REPO WHERE USER CAN PUSH CODE TO
+TEST_REPO_URL="https://github.com/harish-deriv/fake_repo_TEST9"
+echo "Running test on $TEST_REPO_URL..."
+SERIAL_NUMBER=$(ioreg -d2 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformSerialNumber/{print $(NF-1)}')
+for user in $users; do
+    homedir=$basepath/$user
+    if [ -d "$homedir" ]; then
+        # Run the commands as the specific user
+        if sudo -u "$user" bash -c "git clone '$TEST_REPO_URL' /tmp/fake_repo_TEST9;cd /tmp/fake_repo_TEST9 && touch \'$(openssl rand -hex 16).txt\' && git add . && git commit -m 'test'"; then
+            echo "Pre-commit hook works for user $user"
+            rm -rf /tmp/fake_repo_TEST9
+        else
+            rm -rf /tmp/fake_repo_TEST9
+            echo "Pre-commit hook does not work for user $user"
+            sudo -i "$user" bash -c 'cd /tmp/fake_repo_TEST9; git commit -m "TEST"'
+        #    username_encoded=$(echo -n "$user" | base64)
+            echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user"
+            #curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://localhost:8443/endpoint -k -H "Authorization: Bearer token"
+        fi
+    fi
+done
+
+#ROOT USER CHECK
+if sudo bash -c "git clone '$TEST_REPO_URL' /tmp/fake_repo_TEST9;cd /tmp/fake_repo_TEST9 && touch \'$(openssl rand -hex 16).txt\' && git add . && git commit -m 'test'"; then
+    echo "Pre-commit hook works for user root"
+    rm -rf /tmp/fake_repo_TEST9
+else
+    rm -rf /tmp/fake_repo_TEST9
+    echo "Pre-commit hook does not work for user root"
+    sudo bash -c 'cd /tmp/fake_repo_TEST9; git commit -m "TEST"'
+  #  username_encoded=$(echo -n "$user" | base64)
+    echo "Sending data to server: serial number=$SERIAL_NUMBER, username=root"
+    #curl -X POST -d "serial_number=$SERIAL_NUMBER&username=root" https://localhost:8443/endpoint -k -H "Authorization: Bearer token"
+fi
