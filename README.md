@@ -28,3 +28,10 @@
 ### QA Environment Deployment Plan
 1. Dev's are developing and pushing code through QA Box instead of local machine 
 2. Add pre-commit configuration to QA Boc `chef` code  
+
+---
+### Edge Cases
+1. If there are secrets in a brand new git repository (Does not have any commits before), trufflehog would not pick up the secrets.
+    - One workaround would be to run `git log` on the repo if there is no commit it would return `exit code` of `128` instead of `0`
+    - If it a new repo use `trufflehog filesystem .` instead of `trufflehog git file://.`    
+    - This logic can be added to the pre-commit file 
