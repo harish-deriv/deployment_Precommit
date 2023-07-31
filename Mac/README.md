@@ -8,3 +8,10 @@
 5. Configure Pre-Commit for normal users - Done
 5. Configure Pre-Commit for root user - Pending
 6. Testing Pre-Commit - Pending
+
+--- 
+### Kandji
+1. Testing Blue Print: Standard: Testing Pre-Commit Deployment
+2. Custom Deployment Script: Pre-Commit Deployment 
+3. SAP Profile - Admin: Toggle this for sudo access 
+4. SAP Profile - Standard User: Disable this for sudo access

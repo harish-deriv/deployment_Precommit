@@ -4,7 +4,7 @@ echo '[1] Creating /etc/skel/.git/hooks'
 mkdir -p /etc/skel/.git/hooks
 echo '[A] /etc/skel/.git/hooks Created'
 
-# Check if brew is installed 
+# Check if brew is installed - tested
 if [[ -x /usr/local/bin/brew ]] || [[ -x /opt/homebrew/bin/brew ]] || [[ -x /usr/local/Homebrew/bin/brew ]]; then
     echo "[2] Brew is already installed - Installing Now..."
 else
@@ -20,7 +20,6 @@ fi
 
 # Add Trufflehog pre-commit hook
 echo "[6] Generating Pre-Commit File..."
-
 echo '#!/bin/sh
 # Look for a local pre-commit hook in the repository
 if [ -x .git/hooks/pre-commit ]; then
@@ -41,7 +40,7 @@ then
     exit 1
 fi
 rm trufflehog_output.json' > /tmp/pre-commit
-echo '[E] Pre-Commit File generated under /etc/skel/.git/hooks/pre-commit'
+echo '[E] Pre-Commit File generated under /tmp/pre-commit'
 
 
 # Loop through all user directories and create a symbolic link to the global hooks
@@ -52,14 +51,14 @@ basepath="/Users"
 users=$(ls /Users/ | grep -viE "shared|.localized")
 for user in $users; do
 
-    # this command would fail, as `git` binary 
+    # this command would fail, as `git` binary - tested
     if ! command -v git &> /dev/null; then
         echo "[3] Git not found, Installing Git."
         sudo -u 'securitytest' -i bash -c "brew install git"
         echo "[C] Git installation completed."
     fi
 
-    # Download Trufflehog if it's not already installed
+    # Download Trufflehog if it's not already installed - tested
     if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
         echo "[5] Trufflehog already installed"
     else
