@@ -20,8 +20,8 @@ if ! command -v trufflehog &> /dev/null; then
     rm trufflehog.tar.gz
 fi
 
-if [ ! -d /etc/skel/.git/hooks ]; then
-  mkdir -p /etc/skel/.git/hooks
+if [ ! -d /opt/skel/.git/hooks ]; then
+  mkdir -p /opt/skel/.git/hooks
 fi
 
 if ! command -v git &> /dev/null; then
@@ -43,7 +43,7 @@ then
     echo "TruffleHog found secrets. Aborting commit. Please use --no-verify to bypass false positives"
     exit 2
 fi
-rm trufflehog_output.json' > /etc/skel/.git/hooks/pre-commit
+rm trufflehog_output.json' > /opt/skel/.git/hooks/pre-commit
 
 # Add Trufflehog pre-push hook
 echo '#!/bin/sh
@@ -59,11 +59,11 @@ then
     echo "TruffleHog found secrets. Aborting push. Please use --no-verify to bypass false positives"
     exit 2
 fi
-rm trufflehog_output.json' > /etc/skel/.git/hooks/pre-push
+rm trufflehog_output.json' > /opt/skel/.git/hooks/pre-push
 
 # Make the hooks executable
-chmod +x /etc/skel/.git/hooks/pre-commit
-chmod +x /etc/skel/.git/hooks/pre-push
+chmod +x /opt/skel/.git/hooks/pre-commit
+chmod +x /opt/skel/.git/hooks/pre-push
 
 # Loop through all user directories and create a symbolic link to the global hooks
 # If it doens't work, we'll just place the precommit in all user home dir
@@ -74,27 +74,27 @@ for home in /home/*; do
         if [ -d "${hookspath}" ]; then
             if [ -f "${hookspath}pre-commit" ]; then
               sudo -u "${home##*/}" echo "\n" >> "${hookspath}pre-commit" 
-              sudo -u "${home##*/}" cat /etc/skel/.git/hooks/pre-commit >> "${hookspath}/pre-commit"
+              sudo -u "${home##*/}" cat /opt/skel/.git/hooks/pre-commit >> "${hookspath}/pre-commit"
               if [ -f "${hookspath}pre-push" ]; then
               sudo -u "${home##*/}" echo "\n" >> "${hookspath}pre-push" 
-              sudo -u "${home##*/}" cat /etc/skel/.git/hooks/pre-push >> "${hookspath}/pre-push"
+              sudo -u "${home##*/}" cat /opt/skel/.git/hooks/pre-push >> "${hookspath}/pre-push"
               else
               sudo -u "${home##*/}" touch "${hookspath}pre-push"
-              sudo -u "${home##*/}" ln -sf /etc/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
+              sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
               fi
             else
                 sudo -u "${home##*/}" touch "${hookspath}pre-commit"
                 sudo -u "${home##*/}" touch "${hookspath}pre-push"
-                sudo -u "${home##*/}" ln -sf /etc/skel/.git/hooks/pre-commit "${home}/.git/hooks/pre-commit"
-                sudo -u "${home##*/}" ln -sf /etc/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
+                sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-commit "${home}/.git/hooks/pre-commit"
+                sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
             fi
         else
             sudo -u "${home##*/}" git config --global core.hooksPath $home/.git/hooks/
             sudo -u "${home##*/}" mkdir -p $home/.git/hooks
             sudo -u "${home##*/}" touch $home/.git/hooks/pre-push
             sudo -u "${home##*/}" touch $home/.git/hooks/pre-commit
-            sudo -u "${home##*/}" ln -sf /etc/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
-            sudo -u "${home##*/}" ln -sf /etc/skel/.git/hooks/pre-commit "${home}/.git/hooks/pre-commit"
+            sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
+            sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-commit "${home}/.git/hooks/pre-commit"
         fi
     fi
 done
@@ -105,16 +105,16 @@ hookspath=$(sudo git config --get core.hooksPath)
 if [ -d "${hookspath}" ]; then
     if [ -f "${hookspath}pre-commit" ]; then
       echo "\n" >> "${hookspath}pre-commit" 
-      cat /etc/skel/.git/hooks/pre-commit >> "${hookspath}pre-commit"
+      cat /opt/skel/.git/hooks/pre-commit >> "${hookspath}pre-commit"
     else
         touch "${hookspath}pre-commit"
-        ln -sf /etc/skel/.git/hooks/pre-commit "${home}/.git/hooks/pre-commit"
+        ln -sf /opt/skel/.git/hooks/pre-commit "${home}/.git/hooks/pre-commit"
     fi
 else
     git config --global core.hooksPath /root/.git/hooks/
     mkdir -p /root/.git/hooks
     touch /root/.git/hooks/pre-push
-    ln -sf /etc/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
+    ln -sf /opt/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
 fi
 
 # Test the pre-commit and pre-push hooks if secret not detected it sends a POST request to server indicating the user 
