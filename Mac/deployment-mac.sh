@@ -33,6 +33,7 @@ function brew_installation () {
     fi
 }
 
+
 # Add Trufflehog pre-commit hook - tested
 function generate_precommit_file () {
     echo "[2] Generating Pre-Commit File..." >> $LOGPATH
@@ -64,6 +65,7 @@ function generate_precommit_file () {
     rm trufflehog_output' > $PRECOMMIT_FILE_PATH
     echo '[2.1] Pre-Commit File generated under $PRECOMMIT_FILE_PATH' >> $LOGPATH
 }
+
 
 function precommit_configuration () {
     # Loop through all user directories and create a symbolic link to the global hooks - tested
@@ -134,8 +136,12 @@ function precommit_configuration_root () {
     echo "[6.1] pre-commit configuration completed for Root user" >> $LOGPATH
 }
 
+
 # Takes in two arguments: username, commit message
 function commit_repo () {
+    ### Note ###
+    # 1. If there are nothing to commit, git would return exit code 1
+    
     # Run the commands as the specific user
 
     sudo -u "$1" bash -c "git clone '$TEST_REPO_URL' $TEST_REPO_PATH"
@@ -184,6 +190,7 @@ function test_precommit () {
         # fi
     done
 }
+
 
 #ROOT USER CHECK
 function test_precommit_root () {
