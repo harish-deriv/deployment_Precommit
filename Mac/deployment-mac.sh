@@ -7,7 +7,7 @@ TEST_REPO_PATH="/tmp/fake_repo_TEST9"
 BASE_PATH="/Users"
 ROOT_PATH="/var/root"
 TRUFFLEHOG_EXIT_CODE_PATH="/tmp/trufflehog_exit_code"
-PRECOMMIT_HOOK_LINK="https://raw.githubusercontent.com/WengOnn-Deriv/deployment_Precommit/main/pre-commit-v2.sh"
+PRECOMMIT_HOOK_LINK="<REPLACE WITH LATEST PRECOMMIT URL>"
 LOGPATH="/tmp/pre-commit-deployment.log"
 
 SERIAL_NUMBER=$(ioreg -d2 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformSerialNumber/{print $(NF-1)}')
