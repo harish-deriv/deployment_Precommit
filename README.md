@@ -11,23 +11,34 @@
 3. [Pre-commit hook](https://gist.github.com/harish-deriv/134064f95a2b2313a8991bc8d9f9560c)
 4. [Deployment Script](https://gist.github.com/harish-deriv/86e81c0910f85b041430554d4a9de687)
 
+### QA Box Inventory List
+1. [Inventory List](https://github.com/regentmarkets/chef-qa-provisioning/blob/master/inventory.txt)
+
 ### Deployment Plan
+#### Overview
 1. Linux deployment - Jumpcloud
 2. MacOS deployment - Kandji
 3. Main slack channel - #temp_precommit_hooks_plan
 4. Create Slack channel for respective team `temp_precommit_deployment_{TEAM_NAME}` in order to communicate with the team
-5. A python server would be set up to receive deployment status through the deployment script - **does not have access to code**
+5. A python server would be set up to receive deployment status through the deployment script
     - Fail condition:
         - Once deployed, there will be a pre-commit test run on `https://github.com/harish-deriv/fake_repo_TEST9"` that has secret in it 
         - If no secret is detect, send a post request to the python server. 
         - **Note:** Due to the default users (i.e. root and deriv) false positive would occur
 6. The deployment would need to be modified depending on the dev's environment
 7. Set up a AWS Instance for the python server
+    - Used to receive logs from deployment script 
 
+
+#### Configurations
+1. The precommit bash script would be hosted on a public repository.
+2. The main precommit file would execute the bash script through `curl` and piped the output to `/bin/bash`.
+3. Reasons:
+    - This would make maintaining the pre-commit much easier as future update can simply be performed update the repository.  
 
 ### QA Environment Deployment Plan
 1. Dev's are developing and pushing code through QA Box instead of local machine 
-2. Add pre-commit configuration to QA Boc `chef` code  
+2. Add pre-commit configuration to QA Box `chef` code  
 
 ---
 ### Edge Cases
