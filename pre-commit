@@ -1,14 +1,25 @@
-#!/bin/sh
-#Look for a local pre-commit hook in the repository
+#!/bin/bash
+# Look for a local pre-commit hook in the repository
 if [ -x .git/hooks/pre-commit ]; then
     .git/hooks/pre-commit || exit $?
 fi
-trufflehog git file://. --only-verified --fail --no-update > trufflehog_output.json
-if [ -s trufflehog_output.json ]
-then
-    cat trufflehog_output.json
-    rm trufflehog_output.json
-    echo "TruffleHog found secrets. Aborting commit. use --no-verify to bypass it"
-    exit 2
+
+# Look for a local husky pre-commit hook in the repository
+if [ -x .husky/pre-commit ]; then
+    .husky/pre-commit || exit $?
 fi
-rm trufflehog_output.json
+
+# Use `filesysytem` if the git repo does not have any commits i.e its a new git repo.
+if git log -1; then
+    echo "global gittt"
+    trufflehog git file://. --no-update --since-commit HEAD --fail > /opt/skel/trufflehog_output.json
+    trufflehog_exit_code=$?
+    echo $trufflehog_exit_code > /opt/skel/trufflehog_exit_codes
+    exit $trufflehog_exit_code
+else
+    echo "global fileystemmm"
+    trufflehog filesystem . --no-update --fail > /opt/skel/trufflehog_output.json
+    trufflehog_exit_code=$?
+    echo $trufflehog_exit_code > /opt/skel/trufflehog_exit_codes
+    exit $trufflehog_exit_code
+fi
