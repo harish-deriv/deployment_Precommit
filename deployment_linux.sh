@@ -26,42 +26,9 @@ function install_trufflehog() {
 
 # Function to add Trufflehog pre-commit hook
 function add_precommit_hook() {
-    echo '#!/bin/sh
-# Look for a local pre-commit hook in the repository
-if [ -x .git/hooks/pre-commit ]; then
-    .git/hooks/pre-commit || exit $?
-fi
-trufflehog git file://. --since-commit HEAD --fail --no-update > trufflehog_output.json
-if [ -s trufflehog_output.json ]
-then
-    cat trufflehog_output.json
-    rm trufflehog_output.json
-    echo "TruffleHog found secrets. Aborting commit. Please use --no-verify to bypass false positives"
-    exit 2
-fi
-rm trufflehog_output.json' > /opt/skel/.git/hooks/pre-commit
-
+    PRE_COMMIT_URL="https://raw.githubusercontent.com/harish-deriv/deployment_Precommit/main/pre-commit"
+    curl -sSL "$PRE_COMMIT_URL" > /opt/skel/.git/hooks/pre-commit
     chmod +x /opt/skel/.git/hooks/pre-commit
-}
-
-# Function to add Trufflehog pre-push hook
-function add_prepush_hook() {
-    echo '#!/bin/sh
-# Look for a local pre-push hook in the repository
-if [ -x .git/hooks/pre-push ]; then
-    .git/hooks/pre-push || exit $?
-fi
-trufflehog git file://. --since-commit HEAD --fail --no-update > trufflehog_output.json
-if [ -s trufflehog_output.json ]
-then
-    cat trufflehog_output.json
-    rm trufflehog_output.json
-    echo "TruffleHog found secrets. Aborting push. Please use --no-verify to bypass false positives"
-    exit 2
-fi
-rm trufflehog_output.json' > /opt/skel/.git/hooks/pre-push
-
-    chmod +x /opt/skel/.git/hooks/pre-push
 }
 
 # Function to set up global git hooks and hooks for each user
