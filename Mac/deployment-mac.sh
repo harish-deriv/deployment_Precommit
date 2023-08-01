@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# echo '[1] Creating /etc/skel/.git/hooks'
-# mkdir -p /etc/skel/.git/hooks
-# echo '[A] /etc/skel/.git/hooks Created'
+echo '[1] Creating /opt/skel/.git/hooks'
+mkdir -p /opt/skel/.git/hooks
+echo '[A] /opt/skel/.git/hooks Created'
 
 # /---------------------------CONSTANTS-----------------------------------/
 TEST_REPO_URL="https://github.com/harish-deriv/fake_repo_TEST9"
@@ -10,13 +10,14 @@ TEST_REPO_PATH="/tmp/fake_repo_TEST9"
 
 BASE_PATH="/Users"
 ROOT_PATH="/var/root"
-PRECOMMIT_FILE_PATH="/tmp/pre-commit"
+PRECOMMIT_HOOK_PATH="/opt/skel/.git/hooks/pre-commit"
+TRUFFLEHOG_EXIT_CODE_PATH="/tmp/trufflehog_exit_code"
 
 LOGPATH="/tmp/pre-commit-deployment.log"
 
 SERIAL_NUMBER=$(ioreg -d2 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformSerialNumber/{print $(NF-1)}')
 
-USERS=$(ls /Users/ | grep -viE "shared|.localized")
+USERS=$(ls /Users/ | grep -viE "shared|.localized|PKXWMW1445|temp")
 
 # /---------------------------Functions-----------------------------------/
 
@@ -40,32 +41,33 @@ function brew_installation () {
 function generate_precommit_file () {
     echo "[2] Generating Pre-Commit File..." >> $LOGPATH
     echo '#!/bin/bash
-    # Look for a local pre-commit hook in the repository
-    if [ -x .git/hooks/pre-commit ]; then
-        .git/hooks/pre-commit || exit $?
-    fi
+# Look for a local pre-commit hook in the repository
+if [ -x .git/hooks/pre-commit ]; then
+    .git/hooks/pre-commit || exit $?
+fi
 
-    # Look for a local husky pre-commit hook in the repository
-    if [ -x .husky/pre-commit ]; then
-        .git/hooks/pre-commit || exit $?
-    fi
+# Look for a local husky pre-commit hook in the repository
+if [ -x .husky/pre-commit ]; then
+    .husky/pre-commit || exit $?
+fi
 
-    # Use `filesysytem` if the git repo does not have any commits
-    if git log -1; then
-        trufflehog git file://. --no-update --since-commit HEAD > trufflehog_output
-    else
-        trufflehog filesystem . --no-update > trufflehog_output
-    fi
-
-    if [ -s trufflehog_output ]
-    then
-        cat trufflehog_output
-        rm trufflehog_output
-        echo "TruffleHog found secrets. Aborting commit."
-        exit 1
-    fi
-    rm trufflehog_output' > $PRECOMMIT_FILE_PATH
-    echo "[2.1] Pre-Commit File generated under $PRECOMMIT_FILE_PATH" >> $LOGPATH
+# Use `filesysytem` if the git repo does not have any commits i.e its a new git repo.
+if git log -1; then
+    echo "global gittt"
+    trufflehog git file://. --no-update --since-commit HEAD --fail > /tmp/trufflehog_output_$(whoami) 2>&1
+    trufflehog_exit_code=$?
+    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code
+else
+    echo "global fileystemmm"
+    trufflehog filesystem . --no-update --fail > /tmp/trufflehog_output_$(whoami) 2>&1
+    trufflehog_exit_code=$?
+    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code
+fi
+if [ $trufflehog_exit_code -eq 183 ]; then
+    cat /tmp/trufflehog_output_$(whoami)
+    exit $trufflehog_exit_code
+fi' > $PRECOMMIT_HOOK_PATH
+    echo "[2.1] Pre-Commit File generated under $PRECOMMIT_HOOK_PATH" >> $LOGPATH
 }
 
 
@@ -105,7 +107,7 @@ function precommit_configuration () {
         sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
         sudo -u $user -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-        sudo -u $user -i bash -c "cat $PRECOMMIT_FILE_PATH >> $global_hooksPath/pre-commit"
+        sudo -u $user -i bash -c "echo -e '#!/bin/bash\n/bin/bash $PRECOMMIT_HOOK_PATH' >> $global_hooksPath/pre-commit"
         sudo -u $user -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
         echo "/-------Configuration Completed for $homedir-------/" >> $LOGPATH
@@ -130,7 +132,7 @@ function precommit_configuration_root () {
     sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
     sudo -u root -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-    sudo -u root -i bash -c "cat $PRECOMMIT_FILE_PATH >> $global_hooksPath/pre-commit"
+    sudo -u root -i bash -c "echo -e '#!/bin/bash\n/bin/bash $PRECOMMIT_HOOK_PATH' >> $global_hooksPath/pre-commit"
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
     echo "/-------Configuration Completed for $ROOT_PATH-------/" >> $LOGPATH
@@ -150,8 +152,8 @@ function commit_repo () {
     sudo -u "$1" bash -c "cp $TEST_REPO_PATH/creds $TEST_REPO_PATH/newcreds"
     sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" add ."
     sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" commit -m '$2'"
-    precommit_exit_code=$? # return 1 if precommit detects secrets, return 0 if precommit does not detects secrets
-    # rm -rf $TEST_REPO_PATH
+    precommit_exit_code=$(cat $TRUFFLEHOG_EXIT_CODE_PATH) # return 1 if precommit detects secrets, return 0 if precommit does not detects secrets
+    rm -rf $TEST_REPO_PATH 
 }
 
 
@@ -165,32 +167,22 @@ function test_precommit () {
         commit_repo "$user" "Testing Pre-Commit for $user"
         if [[ $precommit_exit_code -eq 0 ]]
         then
-            echo "Pre-commit hook doesn't work for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
-            echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user" >> $LOGPATH
-            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
-        elif [[ $precommit_exit_code -eq 1 ]]
+            message="Trufflehog found no secrets with no errors"
+            echo "Trufflehog found no secrets with no errors for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
+            echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
+            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
+        elif [[ $precommit_exit_code -eq 183 ]]
         then
-            echo "Pre-commit hook works for user $user" >> $LOGPATH
+            message="Trufflehog found secrets with no errors"
+            echo "Trufflehog found secrets with no errors for the $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
+            echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
+            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
         else
-            echo "Pre-commit hook does not work for user $user - exit code: $precommit_exit_code" >> $LOGPATH
-            echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user" >> $LOGPATH
-            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
+            message="Trufflehog had some error"
+            echo "Trufflehog had some error for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
+            echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
+            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
         fi
-
-        # if sudo -u "$user" -i bash -c "git clone '$TEST_REPO_URL' $TEST_REPO_PATH;cd $TEST_REPO_PATH && cp creds newcreds && git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" add . && git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" commit -m 'test'"; then
-        #     echo "Pre-commit hook doesn't work for the user $user - pre-commit returning exit code 0" >> $LOGPATH
-        #     rm -rf $TEST_REPO_PATH
-        # else
-        #     trufflehog_exit_code=$?
-        #     rm -rf $TEST_REPO_PATH
-        #     if [[ $trufflehog_exit_code == 1 ]]; then
-        #         echo "Pre-commit hook works for user $user" >> $LOGPATH
-        #     else
-        #         echo "Pre-commit hook does not work for user $user" >> $LOGPATH
-        #         echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user" >> $LOGPATH
-        #         curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
-        #     fi
-        # fi
     done
 }
 
@@ -203,43 +195,31 @@ function test_precommit_root () {
     commit_repo "$user" "Testing Pre-Commit for $user"
     if [[ $precommit_exit_code -eq 0 ]]
     then
-        echo "Pre-commit hook doesn't work for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
-        echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user" >> $LOGPATH
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
-    elif [[ $precommit_exit_code -eq 1 ]]
+        message="Trufflehog found no secrets with no errors"
+        echo "Trufflehog found no secrets with no errors for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
+        echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
+    elif [[ $precommit_exit_code -eq 183 ]]
     then
-        echo "Pre-commit hook works for user $user" >> $LOGPATH
+        message="Trufflehog found secrets with no errors"
+        echo "Trufflehog found secrets with no errors for the $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
+        echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
     else
-        echo "Pre-commit hook does not work for user $user - exit code: $precommit_exit_code" >> $LOGPATH
-        echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user" >> $LOGPATH
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
+        message="Trufflehog had some error"
+        echo "Trufflehog had some error for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
+        echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
     fi
-
-    # if sudo -u "root" -i bash -c "git clone '$TEST_REPO_URL' $TEST_REPO_PATH;cd $TEST_REPO_PATH && cp creds newcreds && git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" add . && git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" commit -m 'test'"; then
-    #     echo "Pre-commit hook does not work for user root - pre-commit returning exit code 0" >> $LOGPATH
-    #     curl -X POST -d "serial_number=$SERIAL_NUMBER&username=root" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: TOKEN"
-    #     rm -rf $TEST_REPO_PATH
-    # else
-    #     trufflehog_exit_code=$?
-    #     rm -rf $TEST_REPO_PATH
-    #     if [[ $trufflehog_exit_code == 1 ]]; then
-    #         echo "Pre-commit hook works for user root" >> $LOGPATH
-    #     else
-    #         echo "Pre-commit hook does not work for user root" >> $LOGPATH
-    #         echo "Sending data to server: serial number=$SERIAL_NUMBER, username=root" >> $LOGPATH
-    #         curl -X POST -d "serial_number=$SERIAL_NUMBER&username=root" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: TOKEN"
-    #     fi
-    # fi
 }
 
 # /----------------------------MAIN----------------------------------/
 # Setting up Pre-commit
-brew_installation
+#brew_installation
 generate_precommit_file 
-precommit_configuration
-precommit_configuration_root
+#precommit_configuration
+#precommit_configuration_root
 
 ## Require more testing
-# Testing precommit
-# test_precommit
+test_precommit
 # test_precommit_root
