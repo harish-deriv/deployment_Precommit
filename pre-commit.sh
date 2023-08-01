@@ -19,6 +19,8 @@ else
     trufflehog_exit_code=$?
     echo $trufflehog_exit_code > /tmp/trufflehog_exit_code
 fi
+
+# Only display results to stdout if trufflehog found something.
 if [ $trufflehog_exit_code -eq 183 ]; then
     cat /tmp/trufflehog_output_$(whoami)
     echo "TruffleHog found secrets. Aborting commit. use --no-verify to bypass it"
