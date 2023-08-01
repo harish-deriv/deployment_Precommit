@@ -66,35 +66,18 @@ rm trufflehog_output.json' > /opt/skel/.git/hooks/pre-push
 
 # Function to set up global git hooks and hooks for each user
 function setup_git_hooks() {
-    local hookspath=
+    local hookspath
 
+    # Set up hooks for each user
     for home in /home/*; do
         if [ -d "${home}" ]; then
             hookspath=$(sudo -u "${home##*/}" git config --get core.hooksPath)
             if [ -d "${hookspath}" ]; then
-                if [ -f "${hookspath}pre-commit" ]; then
-                    sudo -u "${home##*/}" echo "\n" >> "${hookspath}pre-commit"
-                    sudo -u "${home##*/}" cat /opt/skel/.git/hooks/pre-commit >> "${hookspath}/pre-commit"
-                    if [ -f "${hookspath}pre-push" ]; then
-                        sudo -u "${home##*/}" echo "\n" >> "${hookspath}pre-push"
-                        sudo -u "${home##*/}" cat /opt/skel/.git/hooks/pre-push >> "${hookspath}/pre-push"
-                    else
-                        sudo -u "${home##*/}" touch "${hookspath}pre-push"
-                        sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
-                    fi
-                else
-                    sudo -u "${home##*/}" touch "${hookspath}pre-commit"
-                    sudo -u "${home##*/}" touch "${hookspath}pre-push"
-                    sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-commit "${home}/.git/hooks/pre-commit"
-                    sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
-                fi
+                sudo -u "${home##*/}" echo "\n bash /opt/skel/.git/hooks/pre-commit" >> "${hookspath}pre-commit"
+                # We don't need pre-push hooks, so skipping that part
             else
-                sudo -u "${home##*/}" git config --global core.hooksPath $home/.git/hooks/
-                sudo -u "${home##*/}" mkdir -p $home/.git/hooks
-                sudo -u "${home##*/}" touch $home/.git/hooks/pre-push
-                sudo -u "${home##*/}" touch $home/.git/hooks/pre-commit
-                sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
-                sudo -u "${home##*/}" ln -sf /opt/skel/.git/hooks/pre-commit "${home}/.git/hooks/pre-commit"
+                sudo -u "${home##*/}" git config --global core.hooksPath "$home/.git/hooks/"
+                sudo -u "${home##*/}" echo "\n bash /opt/skel/.git/hooks/pre-commit" >> "${home}/.git/hooks/pre-commit"
             fi
         fi
     done
@@ -102,18 +85,10 @@ function setup_git_hooks() {
     # Set up hooks for the root user
     hookspath=$(sudo git config --get core.hooksPath)
     if [ -d "${hookspath}" ]; then
-        if [ -f "${hookspath}pre-commit" ]; then
-            echo "\n" >> "${hookspath}pre-commit"
-            cat /opt/skel/.git/hooks/pre-commit >> "${hookspath}pre-commit"
-        else
-            touch "${hookspath}pre-commit"
-            ln -sf /opt/skel/.git/hooks/pre-commit "${home}/.git/hooks/pre-commit"
-        fi
+        echo "\n bash /opt/skel/.git/hooks/pre-commit" >> "${hookspath}pre-commit"
     else
-        git config --global core.hooksPath /root/.git/hooks/
-        mkdir -p /root/.git/hooks
-        touch /root/.git/hooks/pre-push
-        ln -sf /opt/skel/.git/hooks/pre-push "${home}/.git/hooks/pre-push"
+        git config --global core.hooksPath "/root/.git/hooks/"
+        echo "\n bash /opt/skel/.git/hooks/pre-commit" >> "/root/.git/hooks/pre-commit"
     fi
 }
 
