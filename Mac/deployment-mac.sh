@@ -16,6 +16,8 @@ LOGPATH="/tmp/pre-commit-deployment.log"
 
 SERIAL_NUMBER=$(ioreg -d2 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformSerialNumber/{print $(NF-1)}')
 
+USERS=$(ls /Users/ | grep -viE "shared|.localized")
+
 # /---------------------------Functions-----------------------------------/
 
 # Check if brew is installed - tested
@@ -63,7 +65,7 @@ function generate_precommit_file () {
         exit 1
     fi
     rm trufflehog_output' > $PRECOMMIT_FILE_PATH
-    echo '[2.1] Pre-Commit File generated under $PRECOMMIT_FILE_PATH' >> $LOGPATH
+    echo "[2.1] Pre-Commit File generated under $PRECOMMIT_FILE_PATH" >> $LOGPATH
 }
 
 
@@ -72,8 +74,7 @@ function precommit_configuration () {
     # If it doens't work, we'll just place the precommit in all user home dir
     #hookspath=
     echo "[3] Configuring pre-commit configuration for all users" >> $LOGPATH
-    users=$(ls /Users/ | grep -viE "shared|.localized")
-    for user in $users; do
+    for user in $USERS; do
 
         # this command would fail, as `git` binary - tested
         if ! command -v git &> /dev/null; then
@@ -150,7 +151,7 @@ function commit_repo () {
     sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" add ."
     sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" commit -m '$2'"
     precommit_exit_code=$? # return 1 if precommit detects secrets, return 0 if precommit does not detects secrets
-    rm -rf $TEST_REPO_PATH
+    # rm -rf $TEST_REPO_PATH
 }
 
 
@@ -158,15 +159,17 @@ function commit_repo () {
 #### REPLACE REPO WITH ORG REPO WHERE USER CAN PUSH CODE TO
 function test_precommit () {
     echo -e "\n\n/---------------------Running test on $TEST_REPO_URL...---------------------/" >> $LOGPATH
-    for user in $users; do
+    for user in $USERS; do
         homedir=$BASE_PATH/$user
 
         commit_repo "$user" "Testing Pre-Commit for $user"
         if [[ $precommit_exit_code -eq 0 ]]
+        then
             echo "Pre-commit hook doesn't work for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
             echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user" >> $LOGPATH
             curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
         elif [[ $precommit_exit_code -eq 1 ]]
+        then
             echo "Pre-commit hook works for user $user" >> $LOGPATH
         else
             echo "Pre-commit hook does not work for user $user - exit code: $precommit_exit_code" >> $LOGPATH
@@ -199,10 +202,12 @@ function test_precommit_root () {
 
     commit_repo "$user" "Testing Pre-Commit for $user"
     if [[ $precommit_exit_code -eq 0 ]]
+    then
         echo "Pre-commit hook doesn't work for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
         echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user" >> $LOGPATH
         curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
     elif [[ $precommit_exit_code -eq 1 ]]
+    then
         echo "Pre-commit hook works for user $user" >> $LOGPATH
     else
         echo "Pre-commit hook does not work for user $user - exit code: $precommit_exit_code" >> $LOGPATH
@@ -230,10 +235,11 @@ function test_precommit_root () {
 # /----------------------------MAIN----------------------------------/
 # Setting up Pre-commit
 brew_installation
-generate_precommit_file
+generate_precommit_file 
 precommit_configuration
 precommit_configuration_root
 
+## Require more testing
 # Testing precommit
-test_precommit
-test_precommit_root
+# test_precommit
+# test_precommit_root
