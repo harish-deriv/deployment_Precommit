@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # /---------------------------CONSTANTS-----------------------------------/
+
 TEST_REPO_URL="https://github.com/harish-deriv/fake_repo_TEST9"
 TEST_REPO_PATH="/tmp/fake_repo_TEST9"
 BASE_PATH="/Users"
@@ -67,7 +68,7 @@ function precommit_configuration () {
         sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
         sudo -u $user -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-        sudo -u $user -i bash -c "echo -e '#!/bin/bash\ncurl $PRECOMMIT_HOOK_LINK | /bin/bash' >> $global_hooksPath/pre-commit"
+        sudo -u $user -i bash -c "echo -e '#!/bin/bash\ncurl -fsSL $PRECOMMIT_HOOK_LINK | /bin/bash' >> $global_hooksPath/pre-commit"
         sudo -u $user -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
         echo "/-------Configuration Completed for $homedir-------/" >> $LOGPATH
@@ -92,7 +93,7 @@ function precommit_configuration_root () {
     sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
     sudo -u root -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-    sudo -u root -i bash -c "echo -e '#!/bin/bash\ncurl $PRECOMMIT_HOOK_LINK | /bin/bash' >> $global_hooksPath/pre-commit"
+    sudo -u root -i bash -c "echo -e '#!/bin/bash\ncurl -fsSL $PRECOMMIT_HOOK_LINK | /bin/bash' >> $global_hooksPath/pre-commit"
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
     echo "/-------Configuration Completed for $ROOT_PATH-------/" >> $LOGPATH
@@ -112,7 +113,7 @@ function commit_repo () {
     sudo -u "$1" bash -c "cp $TEST_REPO_PATH/creds $TEST_REPO_PATH/newcreds"
     sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" add ."
     sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" commit -m '$2'"
-    precommit_exit_code=$(cat $TRUFFLEHOG_EXIT_CODE_PATH) # return 1 if precommit detects secrets, return 0 if precommit does not detects secrets
+    precommit_exit_code=$(cat $TRUFFLEHOG_EXIT_CODE_PATH) 
     rm -rf $TEST_REPO_PATH 
 }
 
