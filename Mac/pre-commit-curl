@@ -1,0 +1,13 @@
+#!/bin/bash
+
+function get_precommit_hook(){
+	pre_commit_hook=$(curl -fsSL "$1" 2>&1)
+   	if [ $? -ne 0 ]; then
+    		echo "Please check your internet and then run again. add --no-verify flag to git commit if this error persists"
+		exit 1
+	else
+		echo "$pre_commit_hook" | /bin/bash
+    fi
+}
+
+get_precommit_hook https://gist.githubusercontent.com/security-binary/29086ac0a834564da2e0da64dd05c728/raw/07344d69825609ad678613d90e6d0ac1a40595eb/pre-commit.sh
