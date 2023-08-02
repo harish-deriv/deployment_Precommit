@@ -7,7 +7,6 @@ TEST_REPO_PATH="/tmp/fake_repo_TEST9"
 BASE_PATH="/Users"
 ROOT_PATH="/var/root"
 TRUFFLEHOG_EXIT_CODE_PATH="/tmp/trufflehog_exit_code"
-PRECOMMIT_HOOK_LINK="<REPLACE WITH LATEST PRECOMMIT URL>"
 LOGPATH="/tmp/pre-commit-deployment.log"
 PRECOMMIT_HOOK_PATH="/tmp/pre-commit"
 
@@ -32,6 +31,24 @@ function brew_installation () {
     fi
 }
 
+# Temporarily generate pre-commit hook       file
+function generate_precommit_file () {
+    echo "[2] Generating Pre-Commit File..." >> $LOGPATH
+    echo '#!/bin/bash
+
+    function get_precommit_hook(){
+        pre_commit_hook=$(curl -fsSL "$1" 2>&1)
+        if [ $? -ne 0 ]; then
+            echo "Please check your internet and then run again. add --no-verify flag to git commit if this error persists"
+            exit 1
+        else
+            echo "$pre_commit_hook" | /bin/bash
+        fi
+    }
+
+    get_precommit_hook https://raw.githubusercontent.com/WengOnn-Deriv/deployment_Precommit/main/pre-commit.sh' > $PRECOMMIT_HOOK_PATH
+    echo "[2.1] Pre-Commit File generated under $PRECOMMIT_HOOK_PATH" >> $LOGPATH
+}
 
 function precommit_configuration () {
     # Loop through all user directories and create a symbolic link to the global hooks - tested
@@ -81,7 +98,6 @@ function precommit_configuration () {
 function precommit_configuration_root () {
     echo "[5] Configuring pre-commit configuration for Root user" >> $LOGPATH
     # Root user if in case they use root for commits
-    global_hooksPath=$(sudo -u root -i bash -c "git config --get core.hooksPath")
     echo "/-------Configuring for root-------/" >> $LOGPATH
 
     global_hooksPath=$(sudo -u root -i bash -c "git config --global --get core.hooksPath")
@@ -175,23 +191,7 @@ function test_precommit_root () {
     fi
 }
 
-function generate_precommit_file () {
-    echo "[2] Generating Pre-Commit File..." >> $LOGPATH
-    echo '#!/bin/bash
 
-function get_precommit_hook(){
-	pre_commit_hook=$(curl -fsSL "$1" 2>&1)
-   	if [ $? -ne 0 ];then
-        echo "Please check your internet and then run again. add --no-verify flag to git commit if this error persists"
-		exit 1
-	else
-		echo "$pre_commit_hook" | /bin/bash
-    fi
-}
-
-get_precommit_hook https://raw.githubusercontent.com/WengOnn-Deriv/deployment_Precommit/main/pre-commit.sh' > $PRECOMMIT_HOOK_PATH
-    echo "[2.1] Pre-Commit File generated under $PRECOMMIT_HOOK_PATH" >> $LOGPATH
-}
 
 # /----------------------------MAIN----------------------------------/
 # Setting up Pre-commit
