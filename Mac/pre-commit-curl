@@ -10,4 +10,4 @@ function get_precommit_hook(){
     fi
 }
 
-get_precommit_hook https://raw.githubusercontent.com/WengOnn-Deriv/deployment_Precommit/main/pre-commit.sh
+get_precommit_hook https://gist.githubusercontent.com/security-binary/29086ac0a834564da2e0da64dd05c728/raw/07344d69825609ad678613d90e6d0ac1a40595eb/pre-commit.sh
