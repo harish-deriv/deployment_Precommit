@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Function to determine the architecture of the device
-function determine_architecture() {
+# Function to download Trufflehog if it's not already installed
+function install_trufflehog() {
     if [ "$(uname -m)" == "x86_64" ]; then
         ARCH="amd64"
     elif [ "$(uname -m)" == "aarch64" ]; then
@@ -10,10 +10,6 @@ function determine_architecture() {
         echo "Error: Unsupported architecture $(uname -m)."
         exit 1
     fi
-}
-
-# Function to download Trufflehog if it's not already installed
-function install_trufflehog() {
     if ! command -v trufflehog &> /dev/null; then
         echo "Downloading Trufflehog..."
         wget -q "https://github.com/trufflesecurity/trufflehog/releases/download/v3.34.0/trufflehog_3.34.0_linux_$ARCH.tar.gz" -O trufflehog.tar.gz
@@ -108,10 +104,8 @@ function test_git_hooks() {
 
 # Main function to call all other functions
 function main() {
-    determine_architecture
     install_trufflehog
     add_precommit_hook
-    add_prepush_hook
     setup_git_hooks
     test_git_hooks
 }
