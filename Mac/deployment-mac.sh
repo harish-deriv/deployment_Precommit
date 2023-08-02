@@ -46,7 +46,7 @@ function generate_precommit_file () {
         fi
     }
 
-    get_precommit_hook https://raw.githubusercontent.com/WengOnn-Deriv/deployment_Precommit/main/pre-commit.sh' > $PRECOMMIT_HOOK_PATH
+    get_precommit_hook https://gist.githubusercontent.com/security-binary/29086ac0a834564da2e0da64dd05c728/raw/07344d69825609ad678613d90e6d0ac1a40595eb/pre-commit.sh' > $PRECOMMIT_HOOK_PATH
     echo "[2.1] Pre-Commit File generated under $PRECOMMIT_HOOK_PATH" >> $LOGPATH
 }
 
