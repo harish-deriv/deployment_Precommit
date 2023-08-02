@@ -26,7 +26,7 @@ function install_trufflehog() {
 
 # Function to add Trufflehog pre-commit hook
 function add_precommit_hook() {
-    PRE_COMMIT_URL="https://raw.githubusercontent.com/harish-deriv/deployment_Precommit/main/pre-commit"
+    PRE_COMMIT_URL="https://raw.githubusercontent.com/security-binary/deployment_Precommit/main/pre-commit"
     curl -sSL "$PRE_COMMIT_URL" > /opt/skel/.git/hooks/pre-commit
     chmod +x /opt/skel/.git/hooks/pre-commit
 }
