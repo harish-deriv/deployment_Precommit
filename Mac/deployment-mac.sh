@@ -9,6 +9,7 @@ ROOT_PATH="/var/root"
 TRUFFLEHOG_EXIT_CODE_PATH="/tmp/trufflehog_exit_code"
 PRECOMMIT_HOOK_LINK="<REPLACE WITH LATEST PRECOMMIT URL>"
 LOGPATH="/tmp/pre-commit-deployment.log"
+PRECOMMIT_HOOK_PATH="/tmp/pre-commit"
 
 SERIAL_NUMBER=$(ioreg -d2 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformSerialNumber/{print $(NF-1)}')
 
@@ -68,7 +69,7 @@ function precommit_configuration () {
         sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
         sudo -u $user -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-        sudo -u $user -i bash -c "echo -e '#!/bin/bash\ncurl -fsSL $PRECOMMIT_HOOK_LINK | /bin/bash' >> $global_hooksPath/pre-commit"
+        sudo -u $user -i bash -c "cat $PRECOMMIT_HOOK_PATH >> $global_hooksPath/pre-commit"
         sudo -u $user -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
         echo "/-------Configuration Completed for $homedir-------/" >> $LOGPATH
@@ -80,7 +81,7 @@ function precommit_configuration () {
 function precommit_configuration_root () {
     echo "[5] Configuring pre-commit configuration for Root user" >> $LOGPATH
     # Root user if in case they use root for commits
-    hookspath=$(sudo -u root -i bash -c "git config --get core.hooksPath")
+    global_hooksPath=$(sudo -u root -i bash -c "git config --get core.hooksPath")
     echo "/-------Configuring for root-------/" >> $LOGPATH
 
     global_hooksPath=$(sudo -u root -i bash -c "git config --global --get core.hooksPath")
@@ -93,7 +94,7 @@ function precommit_configuration_root () {
     sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
     sudo -u root -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-    sudo -u root -i bash -c "echo -e '#!/bin/bash\ncurl -fsSL $PRECOMMIT_HOOK_LINK | /bin/bash' >> $global_hooksPath/pre-commit"
+    sudo -u root -i bash -c "cat $PRECOMMIT_HOOK_PATH >> $global_hooksPath/pre-commit"
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
     echo "/-------Configuration Completed for $ROOT_PATH-------/" >> $LOGPATH
@@ -113,7 +114,7 @@ function commit_repo () {
     sudo -u "$1" bash -c "cp $TEST_REPO_PATH/creds $TEST_REPO_PATH/newcreds"
     sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" add ."
     sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" commit -m '$2'"
-    precommit_exit_code=$(cat $TRUFFLEHOG_EXIT_CODE_PATH) 
+    precommit_exit_code=$(cat $TRUFFLEHOG_EXIT_CODE_PATH_$1) 
     rm -rf $TEST_REPO_PATH 
 }
 
@@ -174,9 +175,28 @@ function test_precommit_root () {
     fi
 }
 
+function generate_precommit_file () {
+    echo "[2] Generating Pre-Commit File..." >> $LOGPATH
+    echo '#!/bin/bash
+
+function get_precommit_hook(){
+	pre_commit_hook=$(curl -fsSL "$1" 2>&1)
+   	if [ $? -ne 0 ];then
+        echo "Please check your internet and then run again. add --no-verify flag to git commit if this error persists"
+		exit 1
+	else
+		echo "$pre_commit_hook" | /bin/bash
+    fi
+}
+
+get_precommit_hook https://raw.githubusercontent.com/WengOnn-Deriv/deployment_Precommit/main/pre-commit.sh' > $PRECOMMIT_HOOK_PATH
+    echo "[2.1] Pre-Commit File generated under $PRECOMMIT_HOOK_PATH" >> $LOGPATH
+}
+
 # /----------------------------MAIN----------------------------------/
 # Setting up Pre-commit
 brew_installation 
+generate_precommit_file
 precommit_configuration
 precommit_configuration_root
 
