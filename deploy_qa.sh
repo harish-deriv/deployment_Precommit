@@ -20,7 +20,7 @@ if [ ! -d /opt/skel/.git/hooks ]; then
   mkdir -p /opt/skel/.git/hooks
 fi
 
-PRE_COMMIT_URL="https://raw.githubusercontent.com/harish-deriv/deployment_Precommit/main/pre-commit"
+PRE_COMMIT_URL="https://raw.githubusercontent.com/security-binary/deployment_Precommit/main/pre-commit"
 curl -sSL "$PRE_COMMIT_URL" > /opt/skel/.git/hooks/pre-commit
 chmod +x /opt/skel/.git/hooks/pre-commit
 
