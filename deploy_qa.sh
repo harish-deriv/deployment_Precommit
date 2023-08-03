@@ -9,6 +9,7 @@ else
     exit 1
 fi
 
+LOGPATH="/tmp/pre-commit-deployment.log"
 if ! command -v trufflehog &> /dev/null; then
     echo "[1] Downloading Trufflehog..." >> $LOGPATH
     wget -q "https://github.com/trufflesecurity/trufflehog/releases/download/v3.34.0/trufflehog_3.34.0_linux_$ARCH.tar.gz" -O trufflehog.tar.gz
@@ -23,7 +24,6 @@ if [ ! -d /opt/skel/.git/hooks ]; then
 fi
 
 PRECOMMIT_HOOK_PATH="/opt/skel/.git/hooks/pre-commit"
-LOGPATH="/tmp/pre-commit-deployment.log"
 function generate_precommit_file () {
     echo "[2] Generating Pre-Commit File..." >> $LOGPATH
     sudo echo '#!/bin/bash
