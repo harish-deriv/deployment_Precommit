@@ -7,7 +7,7 @@ TEST_GIT_REPO="https://github.com/harish-deriv/fake_repo_TEST9"
 invoke_test_1(){
     touch newcreds
     git add .
-    git commit -m "test"
+    git commit -m "test1"
     if [ $? -ne 0 ]; then
         echo "Test 1 failed" | tee -a $TEST_LOGFILE
     else
@@ -19,7 +19,7 @@ invoke_test_1(){
 invoke_test_2(){
     cp creds newcreds
     git add .
-    git commit -m "test"
+    git commit -m "test2"
     if [ $? -ne 0 ]; then
         echo "Test 2 succeded" | tee -a $TEST_LOGFILE
     else
@@ -29,7 +29,7 @@ invoke_test_2(){
 
 #3. cp creds to newfile and commit with —no-verify flag - commit should succed as precommit hook is bypassed
 invoke_test_3(){
-    git commit -m "test" --no-verify
+    git commit -m "test3" --no-verify
     if [ $? -ne 0 ]; then
         echo "Test 3 failed" | tee -a $TEST_LOGFILE
     else
@@ -52,7 +52,7 @@ invoke_test_4(){
 
 #5. append newfile content to creds, delete newfile and commit with —no-verify flag - success
 invoke_test_5(){
-    git commit -m "Test4" --no-verify
+    git commit -m "Test5" --no-verify
     if [ $? -ne 0 ]; then
         echo "Test 5 failed" | tee -a $TEST_LOGFILE
     else
@@ -72,3 +72,5 @@ invoke_test_2
 invoke_test_3
 invoke_test_4
 invoke_test_5
+
+cat $TEST_LOGFILE
