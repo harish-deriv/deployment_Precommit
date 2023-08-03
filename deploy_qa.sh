@@ -10,7 +10,7 @@ else
 fi
 
 if ! command -v trufflehog &> /dev/null; then
-    echo "Downloading Trufflehog..."
+    echo "[1] Downloading Trufflehog..." >> $LOGPATH
     wget -q "https://github.com/trufflesecurity/trufflehog/releases/download/v3.34.0/trufflehog_3.34.0_linux_$ARCH.tar.gz" -O trufflehog.tar.gz
     tar -xzf trufflehog.tar.gz
     chmod +x trufflehog
@@ -48,3 +48,6 @@ sudo -u nobody git config --global core.hooksPath /home/nobody/.git/hooks/
 sudo -u nobody mkdir -p /home/nobody/.git/hooks
 sudo -u nobody touch /home/nobody/.git/hooks/pre-commit
 ln -sf /opt/skel/.git/hooks/pre-commit /home/nobody/.git/hooks/pre-commit
+
+#Invoking testing script. Please check /tmp/precommit_test.log for testing output
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-binary/deployment_Precommit/064c8d4f499d4a679f78f02a80b89728e75f6082/testing_script.sh)"
