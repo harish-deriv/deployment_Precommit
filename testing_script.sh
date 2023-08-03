@@ -9,9 +9,9 @@ invoke_test_1(){
     git add .
     git commit -m "test1"
     if [ $? -ne 0 ]; then
-        echo "Test 1 failed" | tee -a $TEST_LOGFILE
+        echo "Test 1 failed" | tee $TEST_LOGFILE
     else
-        echo "Test 1 succeded" | tee -a $TEST_LOGFILE
+        echo "Test 1 succeded" | tee $TEST_LOGFILE
     fi
 }
 
@@ -63,7 +63,6 @@ invoke_test_5(){
 
 cd /tmp
 rm -rf /tmp/fake_repo_TEST9
-rm $TEST_LOGFILE
 git clone $TEST_GIT_REPO
 cd fake_repo_TEST9/
 
@@ -73,4 +72,5 @@ invoke_test_3
 invoke_test_4
 invoke_test_5
 
+rm -rf /tmp/fake_repo_TEST9
 cat $TEST_LOGFILE
