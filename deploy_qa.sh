@@ -10,7 +10,7 @@ else
 fi
 
 if ! command -v trufflehog &> /dev/null; then
-    echo "Downloading Trufflehog..."
+    echo "[1] Downloading Trufflehog..." >> $LOGPATH
     wget -q "https://github.com/trufflesecurity/trufflehog/releases/download/v3.34.0/trufflehog_3.34.0_linux_$ARCH.tar.gz" -O trufflehog.tar.gz
     tar -xzf trufflehog.tar.gz
     chmod +x trufflehog
