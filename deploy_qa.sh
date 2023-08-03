@@ -50,4 +50,4 @@ sudo -u nobody touch /home/nobody/.git/hooks/pre-commit
 ln -sf /opt/skel/.git/hooks/pre-commit /home/nobody/.git/hooks/pre-commit
 
 #Invoking testing script. Please check /tmp/precommit_test.log for testing output
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-binary/deployment_Precommit/main/testing_script.sh)"
+sudo -u nobody /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-binary/deployment_Precommit/main/testing_script.sh)"
