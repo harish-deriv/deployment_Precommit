@@ -20,11 +20,11 @@ if [ ! -d /opt/skel/.git/hooks ]; then
   mkdir -p /opt/skel/.git/hooks
 fi
 
-PRECOMMIT_HOOK_PATH="/tmp/pre-commit"
+PRECOMMIT_HOOK_PATH="/opt/skel/.git/hooks/pre-commit"
 LOGPATH="/tmp/pre-commit-deployment.log"
 function generate_precommit_file () {
     echo "[2] Generating Pre-Commit File..." >> $LOGPATH
-    echo '#!/bin/bash
+    sudo echo '#!/bin/bash
 
     function get_precommit_hook(){
         pre_commit_hook=$(curl -fsSL "$1" 2>&1)
@@ -38,7 +38,7 @@ function generate_precommit_file () {
 
     get_precommit_hook https://gist.githubusercontent.com/security-binary/29086ac0a834564da2e0da64dd05c728/raw/07344d69825609ad678613d90e6d0ac1a40595eb/pre-commit.sh' > $PRECOMMIT_HOOK_PATH
     echo "[2.1] Pre-Commit File generated under $PRECOMMIT_HOOK_PATH" >> $LOGPATH;
-    chmod +x /opt/skel/.git/hooks/pre-commit
+    sudo chmod +x /opt/skel/.git/hooks/pre-commit
 }
 
 generate_precommit_file
