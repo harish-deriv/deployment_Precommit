@@ -29,6 +29,20 @@ function brew_installation () {
         /bin/bash /tmp/kandji-brew-installation.sh
         echo "[1.1] Brew installation Completed..." >> $LOGPATH
     fi
+
+    for user in $USERS; do
+
+        # Making sure brew is in the path for M1/M2
+        if command -v brew &>/dev/null; then
+            echo "[1.2] Brew is in the path" >> $LOGPATH
+        else
+            echo "[1.2] Brew not in path" >> $LOGPATH
+	        brew_path='\n#adding brew to path as part of pre-commit hook deployment\n#eval $(/opt/homebrew/bin/brew shellenv)'
+            sudo -u $user bash -c "echo -e '$brew_path' >> /Users/$user/.zshrc"
+            sudo -u $user bash -c 'eval $(/opt/homebrew/bin/brew shellenv)'
+            echo "[1.3] Brew added to path" >> $LOGPATH
+        fi
+    done
 }
 
 # Temporarily generate pre-commit hook       file
@@ -60,7 +74,7 @@ function precommit_configuration () {
         # this command would fail, as `git` binary - tested
         if ! command -v git &> /dev/null; then
             echo "[3] Git not found, Installing Git." >> $LOGPATH
-            sudo -u 'securitytest' -i bash -c "brew install git"
+            sudo -u $user -i bash -c "brew install git"
             echo "[3.1] Git installation completed." >> $LOGPATH
         fi
 

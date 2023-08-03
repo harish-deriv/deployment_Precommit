@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [ "$(uname -m)" == "x86_64" ]; then
     ARCH="amd64"
 elif [ "$(uname -m)" == "aarch64" ]; then
