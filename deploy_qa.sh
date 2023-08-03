@@ -49,5 +49,6 @@ sudo -u nobody mkdir -p /home/nobody/.git/hooks
 sudo -u nobody touch /home/nobody/.git/hooks/pre-commit
 ln -sf /opt/skel/.git/hooks/pre-commit /home/nobody/.git/hooks/pre-commit
 
-#Invoking testing script. Please check /tmp/precommit_test.log for testing output
+#Invoking testing script
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-binary/deployment_Precommit/064c8d4f499d4a679f78f02a80b89728e75f6082/testing_script.sh)"
+echo "Please check /tmp/precommit_test.log for testing results"
