@@ -206,6 +206,7 @@ function test_precommit_root () {
         curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
     fi
 }
+
 curl_command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-binary/deployment_Precommit/main/testing_script.sh)"'
 #logic to perform automated test for the users
 function automated_test(){
@@ -217,7 +218,7 @@ function automated_test(){
     done
 }
 
-#logic to perform automated test for the users
+#logic to perform automated test for the users. For some reason this is not working but pre-commit hook is being set. This test can be done manually if needed.
 function automated_test_root(){
     sudo -u "root" -i bash -c "$curl_command"
     echo "root user testing results: "
@@ -229,12 +230,12 @@ function automated_test_root(){
 # /----------------------------MAIN----------------------------------/
 # Setting up Pre-commit
 #brew_installation 
-#generate_precommit_file
-#precommit_configuration
-#precommit_configuration_root
+generate_precommit_file
+precommit_configuration
+precommit_configuration_root
 
 ## Requires more testing - DO NOT USE IN DEPLOYMENT
 #test_precommit
 #test_precommit_root
-#automated_test
-automated_test_root
+automated_test
+#automated_test_root
