@@ -9,6 +9,7 @@ ROOT_PATH="/var/root"
 TRUFFLEHOG_EXIT_CODE_PATH="/tmp/trufflehog_exit_code"
 LOGPATH="/tmp/pre-commit-deployment.log"
 PRECOMMIT_HOOK_PATH="/tmp/pre-commit"
+TEST_LOGFILE="/tmp/precommit_test.log"
 
 SERIAL_NUMBER=$(ioreg -d2 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformSerialNumber/{print $(NF-1)}')
 
@@ -17,6 +18,7 @@ USERS=$(ls /Users/ | grep -viE "shared|.localized")
 # /---------------------------Functions-----------------------------------/
 
 # Check if brew is installed - tested
+# We are skipping this as its path configuration is not working
 function brew_installation () {
     if [[ -x /usr/local/bin/brew ]] || [[ -x /opt/homebrew/bin/brew ]] || [[ -x /usr/local/Homebrew/bin/brew ]]; then
         echo "[1] Brew is already installed" >> $LOGPATH
@@ -36,7 +38,7 @@ function brew_installation () {
         if command -v brew &>/dev/null; then
             echo "[1.2] Brew is in the path" >> $LOGPATH
         else
-            echo "[1.2] Brew not in path" >> $LOGPATH
+            echo "[1.2] Brew is not in path" >> $LOGPATH
 	        brew_path='\n#adding brew to path as part of pre-commit hook deployment\n#eval $(/opt/homebrew/bin/brew shellenv)'
             sudo -u $user bash -c "echo -e '$brew_path' >> /Users/$user/.zshrc"
             sudo -u $user bash -c 'eval $(/opt/homebrew/bin/brew shellenv)'
@@ -205,11 +207,29 @@ function test_precommit_root () {
     fi
 }
 
+curl_command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-binary/deployment_Precommit/main/testing_script.sh)"'
+#logic to perform automated test for the users
+function automated_test(){
+    for user in $USERS; do
+        sudo -u "$user" -i bash -c "$curl_command"
+        echo "$user user testing results: "
+        sudo -u "$user" -i bash -c "cat $TEST_LOGFILE"
+        sudo -u "$user" -i bash -c "rm $TEST_LOGFILE"
+    done
+}
+
+#logic to perform automated test for the users. For some reason this is not working but pre-commit hook is being set. This test can be done manually if needed.
+function automated_test_root(){
+    sudo -u "root" -i bash -c "$curl_command"
+    echo "root user testing results: "
+    sudo -u "root" -i bash -c "cat $TEST_LOGFILE"
+    sudo -u "root" -i bash -c "rm $TEST_LOGFILE"
+}
 
 
 # /----------------------------MAIN----------------------------------/
 # Setting up Pre-commit
-brew_installation 
+#brew_installation 
 generate_precommit_file
 precommit_configuration
 precommit_configuration_root
@@ -217,3 +237,5 @@ precommit_configuration_root
 ## Requires more testing - DO NOT USE IN DEPLOYMENT
 #test_precommit
 #test_precommit_root
+automated_test
+#automated_test_root
