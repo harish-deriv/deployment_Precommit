@@ -237,5 +237,5 @@ precommit_configuration_root
 ## Requires more testing - DO NOT USE IN DEPLOYMENT
 #test_precommit
 #test_precommit_root
-automated_test
+#automated_test
 #automated_test_root
