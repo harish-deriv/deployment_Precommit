@@ -46,3 +46,5 @@
     - One workaround would be to run `git log` on the repo if there is no commit it would return `exit code` of `128` instead of `0`
     - If it a new repo use `trufflehog filesystem .` instead of `trufflehog git file://.`    
     - This logic can be added to the pre-commit file 
+
+    
