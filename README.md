@@ -3,7 +3,7 @@
 ### App Server Request 
 1. Mac request 
 ```bash
-curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=<Error Message> | none>&trufflehog_installed=<Error Message> | none>&user_log_base64=<Insert Base64 user log>&test_log_base64=<Insert Base64 test log>" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: token" 
+    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=<Error Message> | none>&trufflehog_installed=<Error Message> | none>&user_log_base64=<Insert Base64 user log>&test_log_base64=<Insert Base64 test log>" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: token" 
 ```
     - Parameters:
         - `serial_number` - Mac Serial Number
