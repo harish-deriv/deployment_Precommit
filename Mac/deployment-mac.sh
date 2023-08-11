@@ -10,6 +10,9 @@ TEST_LOGFILE="/tmp/precommit_test.log"
 
 USERS=$(ls /Users/ | grep -viE "shared|.localized")
 
+BREW_ERROR_CODE='BREW_NOT_INSTALLED'
+TRUFFLEHOG_ERROR_CODE='TRUFFLEHOG_NOT_INSTALLED'
+
 # /---------------------------Functions-----------------------------------/
 
 # Temporarily generate pre-commit hook       file
@@ -110,6 +113,8 @@ function install_git_truffle(){
                     sudo -u $user -i bash -c "/opt/homebrew/bin/brew install trufflesecurity/trufflehog/trufflehog"
                 else
                     echo "Issue with brew" >> $LOGPATH
+                    # Send slack alert 
+                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: token"
                 fi
             fi
 
@@ -117,6 +122,8 @@ function install_git_truffle(){
                 echo "Trufflehog properly configured for $user at the end" >> $LOGPATH
             else
                 echo "Trufflehog still not properly configured for $user" >> $LOGPATH
+                # Send slack alert 
+                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: token"
             fi
         fi
     done
@@ -128,15 +135,19 @@ function automated_test(){
     for user in $USERS; do
         sudo -u "$user" -i bash -c "$curl_command"
         echo "$user user testing results: "
-        sudo -u "$user" -i bash -c "cat $TEST_LOGFILE"
-        sudo -u "$user" -i bash -c "rm $TEST_LOGFILE"
+        cat $TEST_LOGFILE
+        # Converting file content to base6 and removing trailing newlines  
+        test_log_md5=$(cat $TEST_LOGFILE | md5sum | awk '{print $1}')
+        # Send test log to server
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_base64=$test_log_md5" https://REPLACE_WITH_ELB:8443/mac-test-log-<replace with random endpoint> -k -H "Authorization: token" 
+        rm $TEST_LOGFILE
     done
 }
 
 # /----------------------------MAIN----------------------------------/
 # Setting up Pre-commit
 
-rm $LOGPATH
+rm -f $LOGPATH
 generate_precommit_file
 precommit_configuration
 precommit_configuration_root
@@ -145,3 +156,5 @@ install_git_truffle
 ## Requires more testing - DO NOT USE IN DEPLOYMENT
 automated_test
 cat $LOGPATH
+log_base64=$(cat $LOGPATH | base64 | tr -d '\n')
+curl -X POST -d "serial_number=$SERIAL_NUMBER&user_log_base64=$log_base64 https://REPLACE_WITH_ELB:8443/mac-log-<replace with random endpoint> -k -H "Authorization: token" 
