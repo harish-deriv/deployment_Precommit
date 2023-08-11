@@ -99,9 +99,24 @@ function install_git_truffle(){
             sudo -u $user -i bash -c "brew install trufflesecurity/trufflehog/trufflehog"
             echo "[4.1] Trufflehog Downloaded" >> $LOGPATH
             if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
-                echo "Trufflehog  properly configured for $user" >> $LOGPATH
+                echo "Trufflehog properly configured for $user" >> $LOGPATH
             else
-                echo "Trufflehog not properly configured for $user. Please check manually" >> $LOGPATH
+                echo "Trufflehog not properly configured for $user. Trying again" >> $LOGPATH
+                if [[ -x /usr/local/bin/brew ]]; then
+                    echo "brew exist at /usr/local/bin/brew" >> $LOGPATH
+                    sudo -u $user -i bash -c "/usr/local/bin/brew install trufflesecurity/trufflehog/trufflehog"
+                elif [[ -x /opt/homebrew/bin/brew ]]; then
+                    echo " brew exist at /opt/homebrew/bin/brew" >> $LOGPATH
+                    sudo -u $user -i bash -c "/opt/homebrew/bin/brew install trufflesecurity/trufflehog/trufflehog"
+                else
+                    echo "Issue with brew" >> $LOGPATH
+                fi
+            fi
+
+            if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
+                echo "Trufflehog properly configured for $user at the end" >> $LOGPATH
+            else
+                echo "Trufflehog still not properly configured for $user" >> $LOGPATH
             fi
         fi
     done

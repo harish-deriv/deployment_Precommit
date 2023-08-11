@@ -6,6 +6,7 @@ USERS=$(ls /Users/ | grep -viE "shared|.localized")
 
 for user in $USERS
 do
-        rm -rfv /Users/$user/.git*                                         
-done       
-rm -rfv /var/root/.git* /tmp/pre-commit* /tmp/precommit* /tmp/trufflehog*
+        sudo rm -rfv /Users/$user/.git*                                         
+done 
+      
+sudo rm -rfv /var/root/.git* /tmp/pre-commit* /tmp/precommit* /tmp/trufflehog*
