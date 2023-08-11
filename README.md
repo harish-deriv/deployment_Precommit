@@ -1,3 +1,7 @@
+##### Pending
+1. Change endpoint on server to some random value 
+2. Add all office IPs to security group
+
 ## Pre-Commit Deployment
 
 ### App Server Request 
