@@ -1,5 +1,19 @@
 ## Pre-Commit Deployment
 
+### App Server Request 
+1. Mac request 
+```bash
+curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=<Error Message> | none>&trufflehog_installed=<Error Message> | none>&user_log_base64=<Insert Base64 user log>&test_log_base64=<Insert Base64 test log>" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: token" 
+```
+    - Parameters:
+        - `serial_number` - Mac Serial Number
+        - `username` - Mac Username
+        - `brew_installed` - Error code: `BREW_NOT_INSTALLED`, if this is present, an alert would be sent to slack
+        - `trufflehog_installed` - Error code: `TRUFFLEHOG_NOT_INSTALLED`, if this is present, an alert would be sent to slack
+        - `user_log_base64` - Base64 of the deployment log
+        - `test_log_base64` - Base64 of the testing log
+
+---
 ### Documentations
 1. [Pre-commit & Pre-push installation](https://docs.google.com/document/d/1zqfZc-iyjnsIKHWbHv3mP5-RRH5zEhY5I0iWbdDGyVg/edit#heading=h.ufhpzm1dxy82)
 2. [Pre-commit Deployment tracker](https://docs.google.com/spreadsheets/d/1BwA6rKtyj8861UMmSTwtN8iQtSq_36g__PP8gwFkFJY/edit#gid=0)

@@ -79,7 +79,16 @@ function precommit_configuration () {
         fi
 
         # Download Trufflehog if it's not already installed - tested
-        if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
+        # if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
+        #     echo "[4] Trufflehog already installed" >> $LOGPATH
+        # else
+        #     echo "[4] Downloading Trufflehog..." >> $LOGPATH
+        #     sudo -u $user -i bash -c "brew install trufflesecurity/trufflehog/trufflehog"
+        #     echo "[4.1] Trufflehog Downloaded" >> $LOGPATH
+        # fi
+
+        if [[ $(brew list trufflehog 2>/dev/null) ]]
+        then
             echo "[4] Trufflehog already installed" >> $LOGPATH
         else
             echo "[4] Downloading Trufflehog..." >> $LOGPATH
