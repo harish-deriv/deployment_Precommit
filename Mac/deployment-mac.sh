@@ -9,6 +9,7 @@ PRECOMMIT_HOOK_PATH="/tmp/pre-commit"
 TEST_LOGFILE="/tmp/precommit_test.log"
 
 USERS=$(ls /Users/ | grep -viE "shared|.localized")
+SERIAL_NUMBER=$(ioreg -d2 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformSerialNumber/{print $(NF-1)}')
 
 BREW_ERROR_CODE='BREW_NOT_INSTALLED'
 TRUFFLEHOG_ERROR_CODE='TRUFFLEHOG_NOT_INSTALLED'
@@ -114,7 +115,8 @@ function install_git_truffle(){
                 else
                     echo "Issue with brew" >> $LOGPATH
                     # Send slack alert 
-                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: token"
+                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: Bearer f70572572722843c025f809d817b3063f70"
+                    exit 1
                 fi
             fi
 
@@ -123,7 +125,7 @@ function install_git_truffle(){
             else
                 echo "Trufflehog still not properly configured for $user" >> $LOGPATH
                 # Send slack alert 
-                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: token"
+                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: Bearer f70572572722843c025f809d817b3063f70"
             fi
         fi
     done
@@ -137,9 +139,9 @@ function automated_test(){
         echo "$user user testing results: "
         cat $TEST_LOGFILE
         # Converting file content to base6 and removing trailing newlines  
-        test_log_md5=$(cat $TEST_LOGFILE | md5sum | awk '{print $1}')
+        test_log_md5=$(cat $TEST_LOGFILE | md5 )
         # Send test log to server
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_base64=$test_log_md5" https://REPLACE_WITH_ELB:8443/mac-test-log-<replace with random endpoint> -k -H "Authorization: token" 
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" https://REPLACE_WITH_ELB:8443/mac-test-log-<replace with random endpoint> -k -H "Authorization: Bearer f70572572722843c025f809d817b3063f70" 
         rm $TEST_LOGFILE
     done
 }
@@ -157,4 +159,5 @@ install_git_truffle
 automated_test
 cat $LOGPATH
 log_base64=$(cat $LOGPATH | base64 | tr -d '\n')
-curl -X POST -d "serial_number=$SERIAL_NUMBER&user_log_base64=$log_base64 https://REPLACE_WITH_ELB:8443/mac-log-<replace with random endpoint> -k -H "Authorization: token" 
+echo $SERIAL_NUMBER
+curl -X POST -d "serial_number=$SERIAL_NUMBER&user_log_base64=$log_base64" https://REPLACE_WITH_ELB:8443/mac-log-<replace with random endpoint> -k -H "Authorization: Bearer f70572572722843c025f809d817b3063f70"
