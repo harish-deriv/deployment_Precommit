@@ -16,7 +16,7 @@ TRUFFLEHOG_ERROR_CODE='TRUFFLEHOG_NOT_INSTALLED'
 
 SERVER_URL='https://REPLACE_WITH_ELB:8443'
 AUTH_TOKEN='<Replace with server auth token>'
-RANDOM_ENDPOINT='<replace with random endpoint> '
+RANDOM_ENDPOINT='<replace with random endpoint>'
 
 # /---------------------------Functions-----------------------------------/
 
@@ -93,9 +93,11 @@ function precommit_configuration_root () {
 function install_git_truffle(){
     for user in $USERS; do
         
-        # This will skip the serial number user so that we do not get notifications for the main user.
+        # This will skip the serial number user so that we only get notifications for the main user.
         if [[ "$user" == "$SERIAL_NUMBER" ]]
         then
+            echo "Skipped Installation for Serial Number User - $SERIAL_NUMBER"
+            echo "Skipped Installation for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
             continue
         else
             # this command would fail, as `git` binary - tested
@@ -125,7 +127,7 @@ function install_git_truffle(){
                     else
                         echo "Issue with brew" >> $LOGPATH
                         # Send slack alert 
-                        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT-k -H "Authorization: $AUTH_TOKEN"
+                        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
                         exit 1
                     fi
                 fi
@@ -135,7 +137,7 @@ function install_git_truffle(){
                 else
                     echo "Trufflehog still not properly configured for $user" >> $LOGPATH
                     # Send slack alert 
-                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT-k -H "Authorization: $AUTH_TOKEN"
+                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
                     exit 1
                 fi
             fi
@@ -147,14 +149,23 @@ curl_command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-b
 #logic to perform automated test for the users
 function automated_test(){
     for user in $USERS; do
-        sudo -u "$user" -i bash -c "$curl_command"
-        echo "$user user testing results: "
-        cat $TEST_LOGFILE
-        # Converting file content to base6 and removing trailing newlines  
-        test_log_md5=$(cat $TEST_LOGFILE | md5 )
-        # Send test log to server
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN" 
-        rm $TEST_LOGFILE
+
+        # This will skip the serial number user so that we only get notifications for the main user.
+        if [[ "$user" == "$SERIAL_NUMBER" ]]
+        then
+            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER"
+            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
+            continue
+        else
+            sudo -u "$user" -i bash -c "$curl_command"
+            echo "$user user testing results: "
+            cat $TEST_LOGFILE
+            # Converting file content to base6 and removing trailing newlines  
+            test_log_md5=$(cat $TEST_LOGFILE | md5 )
+            # Send test log to server
+            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN" 
+            rm $TEST_LOGFILE
+        fi
     done
 }
 
