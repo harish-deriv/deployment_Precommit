@@ -14,6 +14,10 @@ SERIAL_NUMBER=$(ioreg -d2 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformSeria
 BREW_ERROR_CODE='BREW_NOT_INSTALLED'
 TRUFFLEHOG_ERROR_CODE='TRUFFLEHOG_NOT_INSTALLED'
 
+SERVER_URL='https://REPLACE_WITH_ELB:8443'
+AUTH_TOKEN='<Replace with server auth token>'
+RANDOM_ENDPOINT='<replace with random endpoint> '
+
 # /---------------------------Functions-----------------------------------/
 
 # Temporarily generate pre-commit hook       file
@@ -55,7 +59,7 @@ function precommit_configuration () {
         sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
         sudo -u $user -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-        sudo -u $user -i bash -c "cat $PRECOMMIT_HOOK_PATH >> $global_hooksPath/pre-commit"
+        sudo -u $user -i bash -c "cat $PRECOMMIT_HOOK_PATH > $global_hooksPath/pre-commit"
         sudo -u $user -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
         echo "/-------Configuration Completed for $homedir-------/" >> $LOGPATH
@@ -79,7 +83,7 @@ function precommit_configuration_root () {
     sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
     sudo -u root -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-    sudo -u root -i bash -c "cat $PRECOMMIT_HOOK_PATH >> $global_hooksPath/pre-commit"
+    sudo -u root -i bash -c "cat $PRECOMMIT_HOOK_PATH > $global_hooksPath/pre-commit"
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
     echo "/-------Configuration Completed for $ROOT_PATH-------/" >> $LOGPATH
@@ -115,7 +119,7 @@ function install_git_truffle(){
                 else
                     echo "Issue with brew" >> $LOGPATH
                     # Send slack alert 
-                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: Bearer f70572572722843c025f809d817b3063f70"
+                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT-k -H "Authorization: $AUTH_TOKEN"
                     exit 1
                 fi
             fi
@@ -125,7 +129,8 @@ function install_git_truffle(){
             else
                 echo "Trufflehog still not properly configured for $user" >> $LOGPATH
                 # Send slack alert 
-                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" https://REPLACE_WITH_ELB:8443/mac-<replace with random endpoint> -k -H "Authorization: Bearer f70572572722843c025f809d817b3063f70"
+                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT-k -H "Authorization: $AUTH_TOKEN"
+                exit 1
             fi
         fi
     done
@@ -141,7 +146,7 @@ function automated_test(){
         # Converting file content to base6 and removing trailing newlines  
         test_log_md5=$(cat $TEST_LOGFILE | md5 )
         # Send test log to server
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" https://REPLACE_WITH_ELB:8443/mac-test-log-<replace with random endpoint> -k -H "Authorization: Bearer f70572572722843c025f809d817b3063f70" 
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN" 
         rm $TEST_LOGFILE
     done
 }
@@ -160,4 +165,4 @@ automated_test
 cat $LOGPATH
 log_base64=$(cat $LOGPATH | base64 | tr -d '\n')
 echo $SERIAL_NUMBER
-curl -X POST -d "serial_number=$SERIAL_NUMBER&user_log_base64=$log_base64" https://REPLACE_WITH_ELB:8443/mac-log-<replace with random endpoint> -k -H "Authorization: Bearer f70572572722843c025f809d817b3063f70"
+curl -X POST -d "serial_number=$SERIAL_NUMBER&user_log_base64=$log_base64" $SERVER_URL/mac-log-endpoint -k -H "Authorization: $AUTH_TOKEN"

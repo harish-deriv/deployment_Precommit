@@ -14,15 +14,17 @@ app = Flask(__name__)
 URL = os.getenv('SLACK_WEBHOOK')
 AUTH_TOKEN = "TOKEN"
 TEST_SUCCESS_MD5='8fab2cca7d6927a6f5f7c866db28ce3e'
+RED='#b90909'
+GREEN='#09b912'
 
-def slack_notification(URL, serial_number=None, username=None, message=None):
+def slack_notification(URL, serial_number=None, username=None, message=None, color=None):
     webhook = WebhookClient(URL)
 
     response = webhook.send(
                 text="Precommit Deployment Alert", 
                 attachments=[
                     {
-                        "color": "#0964B9",
+                        "color": color,
                         "author_name": f"{message}\n",
                         "fields": [{"value": f"Username: {username}\nSerial number: {serial_number}"}], 
                     }
@@ -66,10 +68,10 @@ def mac_notify():
     }
 
     if data['brew_installed'] == 'BREW_NOT_INSTALLED':
-        slack_notification(URL, serial_number=data['serial_number'], username=data['username'], message='Brew not Installed')
+        slack_notification(URL, serial_number=data['serial_number'], username=data['username'], message='Brew not Installed', color=RED)
 
     if data['trufflehog_installed'] == 'TRUFFLEHOG_NOT_INSTALLED':
-        slack_notification(URL, serial_number=data['serial_number'], username=data['username'], message='Trufflehog not Installed')
+        slack_notification(URL, serial_number=data['serial_number'], username=data['username'], message='Trufflehog not Installed', color=RED)
         
     with open('mac_data.csv', mode='a') as csv_file:
         fieldnames = ['serial_number', 'username', 'brew_installed', 'trufflehog_installed']
@@ -91,8 +93,11 @@ def mac_notify_test_log():
 
     if TEST_SUCCESS_MD5 == request.form.get('test_log_md5'):
         data['status'] = 'Success'
+        slack_notification(URL, serial_number=data['serial_number'], username=data['username'], message='Pre-commit Configured Successfully', color=GREEN)
     else:
         data['status'] = 'Fail'
+        slack_notification(URL, serial_number=data['serial_number'], username=data['username'], message='Pre-commit Configured Failed', color=RED)
+
 
     with open('mac_data_test_log.csv', mode='a') as csv_file:
         fieldnames = ['serial_number', 'username', 'status']
