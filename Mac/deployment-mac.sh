@@ -128,7 +128,7 @@ function install_git_truffle(){
                         echo "Issue with brew" >> $LOGPATH
                         # Send slack alert 
                         curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
-                        exit 1
+                        exit 0
                     fi
                 fi
     
@@ -138,7 +138,7 @@ function install_git_truffle(){
                     echo "Trufflehog still not properly configured for $user" >> $LOGPATH
                     # Send slack alert 
                     curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
-                    exit 1
+                    exit 0
                 fi
             fi
         fi
