@@ -26,19 +26,23 @@ fi
 PRECOMMIT_HOOK_PATH="/opt/skel/.git/hooks/pre-commit"
 function generate_precommit_file () {
     echo "[2] Generating Pre-Commit File..." >> $LOGPATH
-    sudo echo '#!/bin/bash
+    sudo echo '# Use `filesysytem` if the git repo does not have any commits i.e its a new git repo.
+if git log -1 > /dev/null 2>&1; then
+    trufflehog git file://. --no-update --since-commit HEAD --fail > /tmp/trufflehog_output_$(whoami) 2>&1
+    trufflehog_exit_code=$?
+    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code_$(whoami)
+else
+    trufflehog filesystem . --no-update --fail > /tmp/trufflehog_output_$(whoami) 2>&1
+    trufflehog_exit_code=$?
+    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code_$(whoami)
+fi
 
-    function get_precommit_hook(){
-        pre_commit_hook=$(curl -fsSL "$1" 2>&1)
-        if [ $? -ne 0 ]; then
-            echo "Please check your internet and then run again. add --no-verify flag to git commit if this error persists"
-            exit 1
-        else
-            echo "$pre_commit_hook" | /bin/bash
-        fi
-    }
-
-    get_precommit_hook https://gist.githubusercontent.com/security-binary/29086ac0a834564da2e0da64dd05c728/raw/07344d69825609ad678613d90e6d0ac1a40595eb/pre-commit.sh' > $PRECOMMIT_HOOK_PATH
+# Only display results to stdout if trufflehog found something.
+if [ $trufflehog_exit_code -eq 183 ]; then
+    cat /tmp/trufflehog_output_$(whoami)
+    echo "TruffleHog found secrets. Aborting commit. use --no-verify to bypass it"
+    exit $trufflehog_exit_code
+fi' > $PRECOMMIT_HOOK_PATH
     echo "[2.1] Pre-Commit File generated under $PRECOMMIT_HOOK_PATH" >> $LOGPATH;
     sudo chmod +x /opt/skel/.git/hooks/pre-commit
 }
@@ -48,6 +52,3 @@ sudo -u nobody git config --global core.hooksPath /home/nobody/.git/hooks/
 sudo -u nobody mkdir -p /home/nobody/.git/hooks
 sudo -u nobody touch /home/nobody/.git/hooks/pre-commit
 ln -sf /opt/skel/.git/hooks/pre-commit /home/nobody/.git/hooks/pre-commit
-
-#Invoking testing script. Please check /tmp/precommit_test.log for testing output
-sudo -u nobody /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-binary/deployment_Precommit/main/testing_script.sh)"
