@@ -182,5 +182,4 @@ install_git_truffle
 automated_test
 cat $LOGPATH
 log_base64=$(cat $LOGPATH | base64 | tr -d '\n')
-echo $SERIAL_NUMBER
 curl -X POST -d "serial_number=$SERIAL_NUMBER&user_log_base64=$log_base64" $SERVER_URL/mac-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
