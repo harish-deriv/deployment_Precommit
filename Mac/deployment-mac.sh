@@ -2,50 +2,23 @@
 
 # /---------------------------CONSTANTS-----------------------------------/
 
-TEST_REPO_URL="https://github.com/harish-deriv/fake_repo_TEST9"
-TEST_REPO_PATH="/tmp/fake_repo_TEST9"
 BASE_PATH="/Users"
 ROOT_PATH="/var/root"
-TRUFFLEHOG_EXIT_CODE_PATH="/tmp/trufflehog_exit_code"
 LOGPATH="/tmp/pre-commit-deployment.log"
 PRECOMMIT_HOOK_PATH="/tmp/pre-commit"
 TEST_LOGFILE="/tmp/precommit_test.log"
 
+USERS=$(ls /Users/ | grep -viE "shared|.localized")
 SERIAL_NUMBER=$(ioreg -d2 -c IOPlatformExpertDevice | awk -F\" '/IOPlatformSerialNumber/{print $(NF-1)}')
 
-USERS=$(ls /Users/ | grep -viE "shared|.localized")
+BREW_ERROR_CODE='BREW_NOT_INSTALLED'
+TRUFFLEHOG_ERROR_CODE='TRUFFLEHOG_NOT_INSTALLED'
+
+SERVER_URL='https://REPLACE_WITH_ELB:8443'
+AUTH_TOKEN='<Replace with server auth token>'
+RANDOM_ENDPOINT='<replace with random endpoint>'
 
 # /---------------------------Functions-----------------------------------/
-
-# Check if brew is installed - tested
-# We are skipping this as its path configuration is not working
-function brew_installation () {
-    if [[ -x /usr/local/bin/brew ]] || [[ -x /opt/homebrew/bin/brew ]] || [[ -x /usr/local/Homebrew/bin/brew ]]; then
-        echo "[1] Brew is already installed" >> $LOGPATH
-    else
-        echo "[1] Brew is not installed - Installing Now..." >> $LOGPATH
-        # Installing Brew
-        curl -fsSL https://raw.githubusercontent.com/kandji-inc/support/main/Scripts/InstallHomebrew.zsh > /tmp/kandji-brew-installation.sh
-        interpreter='#!/bin/bash'
-        sed -i "1s+.*+$interpreter+" kandji-brew-installation.sh
-        /bin/bash /tmp/kandji-brew-installation.sh
-        echo "[1.1] Brew installation Completed..." >> $LOGPATH
-    fi
-
-    for user in $USERS; do
-
-        # Making sure brew is in the path for M1/M2
-        if command -v brew &>/dev/null; then
-            echo "[1.2] Brew is in the path" >> $LOGPATH
-        else
-            echo "[1.2] Brew is not in path" >> $LOGPATH
-	        brew_path='\n#adding brew to path as part of pre-commit hook deployment\n#eval $(/opt/homebrew/bin/brew shellenv)'
-            sudo -u $user bash -c "echo -e '$brew_path' >> /Users/$user/.zshrc"
-            sudo -u $user bash -c 'eval $(/opt/homebrew/bin/brew shellenv)'
-            echo "[1.3] Brew added to path" >> $LOGPATH
-        fi
-    done
-}
 
 # Temporarily generate pre-commit hook       file
 function generate_precommit_file () {
@@ -73,22 +46,6 @@ function precommit_configuration () {
     echo "[2] Configuring pre-commit configuration for all users" >> $LOGPATH
     for user in $USERS; do
 
-        # this command would fail, as `git` binary - tested
-        if ! command -v git &> /dev/null; then
-            echo "[3] Git not found, Installing Git." >> $LOGPATH
-            sudo -u $user -i bash -c "brew install git"
-            echo "[3.1] Git installation completed." >> $LOGPATH
-        fi
-
-        # Download Trufflehog if it's not already installed - tested
-        if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
-            echo "[4] Trufflehog already installed" >> $LOGPATH
-        else
-            echo "[4] Downloading Trufflehog..." >> $LOGPATH
-            sudo -u $user -i bash -c "brew install trufflesecurity/trufflehog/trufflehog"
-            echo "[4.1] Trufflehog Downloaded" >> $LOGPATH
-        fi
-
         homedir=$BASE_PATH/$user
         echo "/-------Configuring for $homedir-------/" >> $LOGPATH
         
@@ -102,7 +59,7 @@ function precommit_configuration () {
         sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
         sudo -u $user -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-        sudo -u $user -i bash -c "cat $PRECOMMIT_HOOK_PATH >> $global_hooksPath/pre-commit"
+        sudo -u $user -i bash -c "cat $PRECOMMIT_HOOK_PATH > $global_hooksPath/pre-commit"
         sudo -u $user -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
         echo "/-------Configuration Completed for $homedir-------/" >> $LOGPATH
@@ -126,116 +83,103 @@ function precommit_configuration_root () {
     sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
     sudo -u root -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-    sudo -u root -i bash -c "cat $PRECOMMIT_HOOK_PATH >> $global_hooksPath/pre-commit"
+    sudo -u root -i bash -c "cat $PRECOMMIT_HOOK_PATH > $global_hooksPath/pre-commit"
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
     echo "/-------Configuration Completed for $ROOT_PATH-------/" >> $LOGPATH
     echo "[5.1] pre-commit configuration completed for Root user" >> $LOGPATH
 }
 
-
-# Takes in two arguments: username, commit message
-function commit_repo () {
-    ### Note ###
-    # 1. If there are nothing to commit, git would return exit code 1
-    
-    # Run the commands as the specific user
-
-    sudo -u "$1" bash -c "git clone '$TEST_REPO_URL' $TEST_REPO_PATH"
-    sudo -u "$1" bash -c "touch $TEST_REPO_PATH/test-1" # This is to make sure that the repo returns exit codo 0 if something when wrong with the trufflehog scan 
-    sudo -u "$1" bash -c "cp $TEST_REPO_PATH/creds $TEST_REPO_PATH/newcreds"
-    sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" add ."
-    sudo -u "$1" bash -c "git --git-dir="$TEST_REPO_PATH/.git" --work-tree="$TEST_REPO_PATH" commit -m '$2'"
-    precommit_exit_code=$(cat $TRUFFLEHOG_EXIT_CODE_PATH_$1) 
-    rm -rf $TEST_REPO_PATH 
-}
-
-
-# Test the pre-commit and pre-push hooks if secret not detected it sends a POST request to server indicating the user 
-#### REPLACE REPO WITH ORG REPO WHERE USER CAN PUSH CODE TO
-function test_precommit () {
-    echo -e "\n\n/---------------------Running test on $TEST_REPO_URL...---------------------/" >> $LOGPATH
+function install_git_truffle(){
     for user in $USERS; do
-        homedir=$BASE_PATH/$user
-
-        commit_repo "$user" "Testing Pre-Commit for $user"
-        if [[ $precommit_exit_code -eq 0 ]]
+        
+        # This will skip the serial number user so that we only get notifications for the main user.
+        if [[ "$user" == "$SERIAL_NUMBER" ]]
         then
-            message="Trufflehog found no secrets with no errors"
-            echo "Trufflehog found no secrets with no errors for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
-            echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
-            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
-        elif [[ $precommit_exit_code -eq 183 ]]
-        then
-            message="Trufflehog found secrets with no errors"
-            echo "Trufflehog found secrets with no errors for the $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
-            echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
-            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
+            echo "Skipped Installation for Serial Number User - $SERIAL_NUMBER"
+            echo "Skipped Installation for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
+            continue
         else
-            message="Trufflehog had some error"
-            echo "Trufflehog had some error for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
-            echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
-            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
+            # this command would fail, as `git` binary - tested
+            if ! command -v git &> /dev/null; then
+                echo "[3] Git not found, Installing Git." >> $LOGPATH
+                sudo -u $user -i bash -c "brew install git"
+                echo "[3.1] Git installation completed." >> $LOGPATH
+            fi
+    
+            # Download Trufflehog if it's not already installed - tested
+            if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
+                echo "[4] Trufflehog already installed" >> $LOGPATH
+            else
+                echo "[4] Downloading Trufflehog..." >> $LOGPATH
+                sudo -u $user -i bash -c "brew install trufflesecurity/trufflehog/trufflehog"
+                echo "[4.1] Trufflehog Downloaded" >> $LOGPATH
+                if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
+                    echo "Trufflehog properly configured for $user" >> $LOGPATH
+                else
+                    echo "Trufflehog not properly configured for $user. Trying again" >> $LOGPATH
+                    if [[ -x /usr/local/bin/brew ]]; then
+                        echo "brew exist at /usr/local/bin/brew" >> $LOGPATH
+                        sudo -u $user -i bash -c "/usr/local/bin/brew install trufflesecurity/trufflehog/trufflehog"
+                    elif [[ -x /opt/homebrew/bin/brew ]]; then
+                        echo " brew exist at /opt/homebrew/bin/brew" >> $LOGPATH
+                        sudo -u $user -i bash -c "/opt/homebrew/bin/brew install trufflesecurity/trufflehog/trufflehog"
+                    else
+                        echo "Issue with brew" >> $LOGPATH
+                        # Send slack alert 
+                        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+                        exit 0
+                    fi
+                fi
+    
+                if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
+                    echo "Trufflehog properly configured for $user at the end" >> $LOGPATH
+                else
+                    echo "Trufflehog still not properly configured for $user" >> $LOGPATH
+                    # Send slack alert 
+                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+                    exit 0
+                fi
+            fi
         fi
     done
-}
-
-
-#ROOT USER CHECK
-function test_precommit_root () {
-
-    user="root"
-
-    commit_repo "$user" "Testing Pre-Commit for $user"
-    if [[ $precommit_exit_code -eq 0 ]]
-    then
-        message="Trufflehog found no secrets with no errors"
-        echo "Trufflehog found no secrets with no errors for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
-        echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
-    elif [[ $precommit_exit_code -eq 183 ]]
-    then
-        message="Trufflehog found secrets with no errors"
-        echo "Trufflehog found secrets with no errors for the $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
-        echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
-    else
-        message="Trufflehog had some error"
-        echo "Trufflehog had some error for the user $user - pre-commit returning exit code: $precommit_exit_code" >> $LOGPATH
-        echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user, pre-commit exit code=$precommit_exit_code" >> $LOGPATH
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&exit_code=$precommit_exit_code&message=$message" https://REPLACE_WITH_ELB:8443/endpoint -k -H "Authorization: token"
-    fi
 }
 
 curl_command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-binary/deployment_Precommit/main/testing_script.sh)"'
 #logic to perform automated test for the users
 function automated_test(){
     for user in $USERS; do
-        sudo -u "$user" -i bash -c "$curl_command"
-        echo "$user user testing results: "
-        sudo -u "$user" -i bash -c "cat $TEST_LOGFILE"
-        sudo -u "$user" -i bash -c "rm $TEST_LOGFILE"
+
+        # This will skip the serial number user so that we only get notifications for the main user.
+        if [[ "$user" == "$SERIAL_NUMBER" ]]
+        then
+            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER"
+            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
+            continue
+        else
+            sudo -u "$user" -i bash -c "$curl_command"
+            echo "$user user testing results: "
+            cat $TEST_LOGFILE
+            # Converting file content to base6 and removing trailing newlines  
+            test_log_md5=$(cat $TEST_LOGFILE | md5 )
+            # Send test log to server
+            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN" 
+            rm $TEST_LOGFILE
+        fi
     done
 }
 
-#logic to perform automated test for the users. For some reason this is not working but pre-commit hook is being set. This test can be done manually if needed.
-function automated_test_root(){
-    sudo -u "root" -i bash -c "$curl_command"
-    echo "root user testing results: "
-    sudo -u "root" -i bash -c "cat $TEST_LOGFILE"
-    sudo -u "root" -i bash -c "rm $TEST_LOGFILE"
-}
-
-
 # /----------------------------MAIN----------------------------------/
 # Setting up Pre-commit
-#brew_installation 
+
+rm -f $LOGPATH
 generate_precommit_file
 precommit_configuration
 precommit_configuration_root
+install_git_truffle
 
 ## Requires more testing - DO NOT USE IN DEPLOYMENT
-#test_precommit
-#test_precommit_root
-#automated_test
-#automated_test_root
+automated_test
+cat $LOGPATH
+log_base64=$(cat $LOGPATH | base64 | tr -d '\n')
+curl -X POST -d "serial_number=$SERIAL_NUMBER&user_log_base64=$log_base64" $SERVER_URL/mac-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
