@@ -18,6 +18,7 @@ GIT_ERROR_CODE='GIT_NOT_INSTALLED'
 SERVER_URL='https://REPLACE_WITH_ELB:8443'
 AUTH_TOKEN='<Replace with server auth token>'
 RANDOM_ENDPOINT='<replace with random endpoint>'
+HOSTNAME=$(hostname)
 
 # /---------------------------Functions-----------------------------------/
 
@@ -127,7 +128,7 @@ function install_git_truffle(){
     else
         echo "Issue with brew" >> $LOGPATH
         # Send slack alert 
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=&git_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=&git_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
         exit 0
     fi
     
@@ -154,7 +155,7 @@ function install_git_truffle(){
     else
         echo "Git not installed for $user" >> $LOGPATH
         # Send slack alert 
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=&git_installed=$GIT_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&brew_installed=&trufflehog_installed=&git_installed=$GIT_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
         exit 0
     fi
 
@@ -164,7 +165,7 @@ function install_git_truffle(){
     else
         echo "Trufflehog not installed for $user" >> $LOGPATH
         # Send slack alert 
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE&git_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE&git_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
         exit 0
     fi
     
@@ -213,7 +214,7 @@ function monitoring(){
             if [[ $test_log_md5 == "8fab2cca7d6927a6f5f7c866db28ce3e" ]]
             then
                 # Send test log to server
-                #curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
+                #curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
                 echo "Pre-Commit Already Configured"
                 exit 0
             else
