@@ -1,22 +1,30 @@
 #!/bin/bash
 
+#setting default paths
 trufflehog_path="trufflehog"
+git_path="git"
 
+#checking absolute paths
 if [[ -x /usr/local/bin/trufflehog ]]; then
     trufflehog_path="/usr/local/bin/trufflehog"
 elif [[ -x /opt/homebrew/bin/trufflehog ]]; then
     trufflehog_path="/opt/homebrew/bin/trufflehog"
 fi
 
+#checking absolute paths
+if [[ -x /usr/local/bin/git ]]; then
+    git_path="/usr/local/bin/git"
+elif [[ -x /opt/homebrew/bin/git ]]; then
+    git_path="/opt/homebrew/bin/git"
+fi
+
 # Use `filesysytem` if the git repo does not have any commits i.e its a new git repo.
-if git log -1 > /dev/null 2>&1; then
+if $git_path log -1 > /dev/null 2>&1; then
     $trufflehog_path git file://. --no-update --since-commit HEAD --fail > /tmp/trufflehog_output_$(whoami) 2>&1
     trufflehog_exit_code=$?
-    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code_$(whoami)
 else
     $trufflehog_path filesystem . --no-update --fail > /tmp/trufflehog_output_$(whoami) 2>&1
     trufflehog_exit_code=$?
-    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code_$(whoami)
 fi
 
 # Only display results to stdout if trufflehog found something.

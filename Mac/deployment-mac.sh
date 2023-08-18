@@ -26,23 +26,32 @@ function generate_precommit_file () {
     mkdir -p /opt/skel/.git/hooks
     echo '#!/bin/bash
 
+#setting default paths
 trufflehog_path="trufflehog"
+git_path="git"
 
+#checking absolute paths
 if [[ -x /usr/local/bin/trufflehog ]]; then
     trufflehog_path="/usr/local/bin/trufflehog"
 elif [[ -x /opt/homebrew/bin/trufflehog ]]; then
     trufflehog_path="/opt/homebrew/bin/trufflehog"
 fi
 
+#checking absolute paths
+if [[ -x /usr/local/bin/git ]]; then
+    git_path="/usr/local/bin/git"
+elif [[ -x /opt/homebrew/bin/git ]]; then
+    git_path="/opt/homebrew/bin/git"
+fi
+
+
 # Use `filesysytem` if the git repo does not have any commits i.e its a new git repo.
-if git log -1 > /dev/null 2>&1; then
+if $git_path log -1 > /dev/null 2>&1; then
     $trufflehog_path git file://. --no-update --since-commit HEAD --fail > /tmp/trufflehog_output_$(whoami) 2>&1
     trufflehog_exit_code=$?
-    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code_$(whoami)
 else
     $trufflehog_path filesystem . --no-update --fail > /tmp/trufflehog_output_$(whoami) 2>&1
     trufflehog_exit_code=$?
-    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code_$(whoami)
 fi
 
 # Only display results to stdout if trufflehog found something.
@@ -65,7 +74,7 @@ function precommit_configuration () {
         homedir=$BASE_PATH/$user
         echo "/-------Configuring for $homedir-------/" >> $LOGPATH
         
-        global_hooksPath=$(sudo -u $user -i bash -c "git config --global --get core.hooksPath")
+        global_hooksPath=$(sudo -u $user -i bash -c "git config --global core.hooksPath")
         echo "$user hooksPath (Before): $global_hooksPath" >> $LOGPATH
         if [ -z $global_hooksPath ]; then
             global_hooksPath=$homedir/.git/hooks/
@@ -87,7 +96,7 @@ function precommit_configuration_root () {
     # Root user if in case they use root for commits
     echo "/-------Configuring for root-------/" >> $LOGPATH
 
-    global_hooksPath=$(sudo -u root -i bash -c "git config --global --get core.hooksPath")
+    global_hooksPath=$(sudo -u root -i bash -c "git config --global core.hooksPath")
     echo "Root hooksPath (Before): $global_hooksPath" >> $LOGPATH
     if [ -z $global_hooksPath ]; then
         global_hooksPath=$ROOT_PATH/.git/hooks/
@@ -113,46 +122,41 @@ function install_git_truffle(){
             echo "Skipped Installation for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
             continue
         else
-            # this command would fail, as `git` binary - tested
-            if ! command -v git &> /dev/null; then
-                echo "[3] Git not found, Installing Git." >> $LOGPATH
-                sudo -u $user -i bash -c "brew install git"
-                echo "[3.1] Git installation completed." >> $LOGPATH
+            if [[ -x /usr/local/bin/brew ]]; then
+                echo "brew exist at /usr/local/bin/brew" >> $LOGPATH
+                sudo -u $user -i bash -c "/usr/local/bin/brew install trufflesecurity/trufflehog/trufflehog"
+                sudo -u $user -i bash -c "/usr/local/bin/brew install git"
+            elif [[ -x /opt/homebrew/bin/brew ]]; then
+                echo " brew exist at /opt/homebrew/bin/brew" >> $LOGPATH
+                sudo -u $user -i bash -c "/opt/homebrew/bin/brew install trufflesecurity/trufflehog/trufflehog"
+                sudo -u $user -i bash -c "/opt/homebrew/bin/brew install git"
+            else
+                echo "Issue with brew" >> $LOGPATH
+                # Send slack alert 
+                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+                exit 0
             fi
-    
+        
+            #Logic to check if git is installed and setup the global hook path
+            if [[ -x /usr/local/bin/git ]]; then
+                git_path="/usr/local/bin/git"
+            elif [[ -x /opt/homebrew/bin/git ]]; then
+                git_path="/opt/homebrew/bin/git"
+            else
+                echo "Git not installed for $user" >> $LOGPATH
+                # Send slack alert 
+                #curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+                exit 0
+            fi
+
             # Download Trufflehog if it's not already installed - tested
             if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
-                echo "[4] Trufflehog already installed" >> $LOGPATH
+                echo "Trufflehog properly configured for $user at the end" >> $LOGPATH
             else
-                echo "[4] Downloading Trufflehog..." >> $LOGPATH
-                sudo -u $user -i bash -c "brew install trufflesecurity/trufflehog/trufflehog"
-                echo "[4.1] Trufflehog Downloaded" >> $LOGPATH
-                if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
-                    echo "Trufflehog properly configured for $user" >> $LOGPATH
-                else
-                    echo "Trufflehog not properly configured for $user. Trying again" >> $LOGPATH
-                    if [[ -x /usr/local/bin/brew ]]; then
-                        echo "brew exist at /usr/local/bin/brew" >> $LOGPATH
-                        sudo -u $user -i bash -c "/usr/local/bin/brew install trufflesecurity/trufflehog/trufflehog"
-                    elif [[ -x /opt/homebrew/bin/brew ]]; then
-                        echo " brew exist at /opt/homebrew/bin/brew" >> $LOGPATH
-                        sudo -u $user -i bash -c "/opt/homebrew/bin/brew install trufflesecurity/trufflehog/trufflehog"
-                    else
-                        echo "Issue with brew" >> $LOGPATH
-                        # Send slack alert 
-                        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
-                        exit 0
-                    fi
-                fi
-    
-                if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
-                    echo "Trufflehog properly configured for $user at the end" >> $LOGPATH
-                else
-                    echo "Trufflehog still not properly configured for $user" >> $LOGPATH
-                    # Send slack alert 
-                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
-                    exit 0
-                fi
+                echo "Trufflehog not installed for $user" >> $LOGPATH
+                # Send slack alert 
+                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+                exit 0
             fi
         fi
     done
