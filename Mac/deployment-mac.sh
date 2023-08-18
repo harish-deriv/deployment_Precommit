@@ -5,7 +5,7 @@
 BASE_PATH="/Users"
 ROOT_PATH="/var/root"
 LOGPATH="/tmp/pre-commit-deployment.log"
-PRECOMMIT_HOOK_PATH="/tmp/pre-commit"
+PRECOMMIT_HOOK_PATH="/opt/skel/.git/hooks/pre-commit"
 TEST_LOGFILE="/tmp/precommit_test.log"
 
 USERS=$(ls /Users/ | grep -viE "shared|.localized")
@@ -23,19 +23,35 @@ RANDOM_ENDPOINT='<replace with random endpoint>'
 # Temporarily generate pre-commit hook       file
 function generate_precommit_file () {
     echo "[2] Generating Pre-Commit File..." >> $LOGPATH
+    mkdir -p /opt/skel/.git/hooks
     echo '#!/bin/bash
 
-    function get_precommit_hook(){
-        pre_commit_hook=$(curl -fsSL "$1" 2>&1)
-        if [ $? -ne 0 ]; then
-            echo "Please check your internet and then run again. add --no-verify flag to git commit if this error persists"
-            exit 1
-        else
-            echo "$pre_commit_hook" | /bin/bash
-        fi
-    }
+trufflehog_path="trufflehog"
 
-    get_precommit_hook https://gist.githubusercontent.com/security-binary/29086ac0a834564da2e0da64dd05c728/raw/07344d69825609ad678613d90e6d0ac1a40595eb/pre-commit.sh' > $PRECOMMIT_HOOK_PATH
+if [[ -x /usr/local/bin/trufflehog ]]; then
+    trufflehog_path="/usr/local/bin/trufflehog"
+elif [[ -x /opt/homebrew/bin/trufflehog ]]; then
+    trufflehog_path="/opt/homebrew/bin/trufflehog"
+fi
+
+# Use `filesysytem` if the git repo does not have any commits i.e its a new git repo.
+if git log -1 > /dev/null 2>&1; then
+    $trufflehog_path git file://. --no-update --since-commit HEAD --fail > /tmp/trufflehog_output_$(whoami) 2>&1
+    trufflehog_exit_code=$?
+    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code_$(whoami)
+else
+    $trufflehog_path filesystem . --no-update --fail > /tmp/trufflehog_output_$(whoami) 2>&1
+    trufflehog_exit_code=$?
+    echo $trufflehog_exit_code > /tmp/trufflehog_exit_code_$(whoami)
+fi
+
+# Only display results to stdout if trufflehog found something.
+if [ $trufflehog_exit_code -eq 183 ]; then
+    cat /tmp/trufflehog_output_$(whoami)
+    echo "TruffleHog found secrets. Aborting commit. use --no-verify to bypass it"
+    exit $trufflehog_exit_code
+fi' > $PRECOMMIT_HOOK_PATH
+    chmod +x /opt/skel/.git/hooks/pre-commit
     echo "[2.1] Pre-Commit File generated under $PRECOMMIT_HOOK_PATH" >> $LOGPATH
 }
 
@@ -58,15 +74,13 @@ function precommit_configuration () {
             
         sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
-        sudo -u $user -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-        sudo -u $user -i bash -c "cat $PRECOMMIT_HOOK_PATH > $global_hooksPath/pre-commit"
+        sudo -u $user -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' >> $global_hooksPath/pre-commit"
+        #sudo -u $user -i bash -c "echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit"
         sudo -u $user -i bash -c "chmod +x $global_hooksPath/pre-commit"
-
         echo "/-------Configuration Completed for $homedir-------/" >> $LOGPATH
     done
     echo "[2.1] pre-commit configuration completed for all users" >> $LOGPATH
 }
-
 
 function precommit_configuration_root () {
     echo "[5] Configuring pre-commit configuration for Root user" >> $LOGPATH
@@ -82,8 +96,7 @@ function precommit_configuration_root () {
         
     sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
-    sudo -u root -i bash -c "echo -e '\n' >> $global_hooksPath/pre-commit" 
-    sudo -u root -i bash -c "cat $PRECOMMIT_HOOK_PATH > $global_hooksPath/pre-commit"
+    sudo -u root -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' >> $global_hooksPath/pre-commit" 
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
     echo "/-------Configuration Completed for $ROOT_PATH-------/" >> $LOGPATH
@@ -160,10 +173,40 @@ function automated_test(){
             sudo -u "$user" -i bash -c "$curl_command"
             echo "$user user testing results: "
             cat $TEST_LOGFILE
-            # Converting file content to base6 and removing trailing newlines  
+            # Converting file content to md5 and removing trailing newlines  
             test_log_md5=$(cat $TEST_LOGFILE | md5 )
             # Send test log to server
-            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN" 
+            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
+            rm $TEST_LOGFILE
+        fi
+    done
+}
+
+
+function monitoring(){
+    for user in $USERS; do
+
+        # This will skip the serial number user so that we only get notifications for the main user.
+        if [[ "$user" == "$SERIAL_NUMBER" ]]
+        then
+            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER"
+            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
+            continue
+        else
+            sudo -u "$user" -i bash -c "$curl_command"
+            echo "$user user testing results: "
+            cat $TEST_LOGFILE
+            # Converting file content to md5 and removing trailing newlines  
+            test_log_md5=$(cat $TEST_LOGFILE | md5 )
+            # Send test log to server
+            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
+            if [[ $test_log_md5 == "8fab2cca7d6927a6f5f7c866db28ce3e" ]]
+            then
+                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
+                exit 0
+            else
+                continue
+            fi
             rm $TEST_LOGFILE
         fi
     done
@@ -173,6 +216,7 @@ function automated_test(){
 # Setting up Pre-commit
 
 rm -f $LOGPATH
+#monitoring
 generate_precommit_file
 precommit_configuration
 precommit_configuration_root
