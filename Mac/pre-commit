@@ -1,18 +1,21 @@
 #!/bin/bash
 
-#setting default paths
-trufflehog_path="trufflehog"
-git_path="git"
-
 #checking absolute paths
-if [[ -x /usr/local/bin/trufflehog ]]; then
+if ! command -v trufflehog &> /dev/null; then
+    trufflehog_path="trufflehog"
+elif [[ -x /usr/local/bin/trufflehog ]]; then
     trufflehog_path="/usr/local/bin/trufflehog"
 elif [[ -x /opt/homebrew/bin/trufflehog ]]; then
     trufflehog_path="/opt/homebrew/bin/trufflehog"
+else
+    echo "Trufflehog is not setup. Please run '''brew install trufflehog''' to install it or connect with Product Security team"
+    exit 1
 fi
 
 #checking absolute paths
-if [[ -x /usr/local/bin/git ]]; then
+if ! command -v git &> /dev/null ; then
+    git_path="git"
+elif [[ -x /usr/local/bin/git ]]; then
     git_path="/usr/local/bin/git"
 elif [[ -x /opt/homebrew/bin/git ]]; then
     git_path="/opt/homebrew/bin/git"
