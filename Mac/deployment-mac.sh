@@ -107,7 +107,7 @@ function precommit_configuration_root () {
         
     sudo -u root -i bash -c "$git_path config --global core.hooksPath $global_hooksPath"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
-    sudo -u root -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' >> $global_hooksPath/pre-commit" 
+    sudo -u root -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit" 
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
     echo "/-------Configuration Completed for $ROOT_PATH-------/" >> $LOGPATH
@@ -120,7 +120,7 @@ function install_git_truffle(){
     if [[ -x /usr/local/bin/brew ]]; then
         brew_path="/usr/local/bin/brew"
         echo "Brew exist at $brew_path" >> $LOGPATH
-    elif [[ -x /opt/homebrew/bin/trufflehog ]]; then
+    elif [[ -x /opt/homebrew/bin/brew ]]; then
         brew_path="/opt/homebrew/bin/brew"
         echo "Brew exist at $brew_path" >> $LOGPATH
     else
