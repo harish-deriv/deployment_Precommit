@@ -198,10 +198,9 @@ function monitoring(){
             cat $TEST_LOGFILE
             # Converting file content to md5 and removing trailing newlines  
             test_log_md5=$(cat $TEST_LOGFILE | md5 )
-            # Send test log to server
-            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
             if [[ $test_log_md5 == "8fab2cca7d6927a6f5f7c866db28ce3e" ]]
             then
+                # Send test log to server
                 curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
                 exit 0
             else
