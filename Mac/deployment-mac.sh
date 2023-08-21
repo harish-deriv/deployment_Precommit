@@ -29,28 +29,19 @@ function generate_precommit_file () {
     echo '#!/bin/bash
 
 #checking absolute paths
-if ! command -v trufflehog &> /dev/null; then
+if command -v trufflehog &> /dev/null; then
     trufflehog_path="trufflehog"
 elif [[ -x /usr/local/bin/trufflehog ]]; then
     trufflehog_path="/usr/local/bin/trufflehog"
 elif [[ -x /opt/homebrew/bin/trufflehog ]]; then
     trufflehog_path="/opt/homebrew/bin/trufflehog"
 else
-    echo "Trufflehog is not setup. Please run '''brew install trufflehog''' to install it or connect with Product Security team"
+    echo "Trufflehog is not setup. Please run ** brew install trufflehog ** to install it or connect with Product Security team"
     exit 1
 fi
 
-#checking absolute paths
-if ! command -v git &> /dev/null ; then
-    git_path="git"
-elif [[ -x /usr/local/bin/git ]]; then
-    git_path="/usr/local/bin/git"
-elif [[ -x /opt/homebrew/bin/git ]]; then
-    git_path="/opt/homebrew/bin/git"
-fi
-
 # Use `filesysytem` if the git repo does not have any commits i.e its a new git repo.
-if $git_path log -1 > /dev/null 2>&1; then
+if git log -1 > /dev/null 2>&1; then
     $trufflehog_path git file://. --no-update --since-commit HEAD --fail > /tmp/trufflehog_output_$(whoami) 2>&1
     trufflehog_exit_code=$?
 else
@@ -140,24 +131,11 @@ function install_git_truffle(){
             echo "Skipped Installation for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
             continue
         else
-            #install git and trufflehog using brew
+            #install trufflehog using brew
             sudo -u $user -i bash -c "$brew_path install trufflesecurity/trufflehog/trufflehog"
-            sudo -u $user -i bash -c "$brew_path install git"
             echo "Installation is done for the $user" >> $LOGPATH
         fi
     done
-
-    #Logic to check if git is installed 
-    if [[ -x /usr/local/bin/git ]]; then
-        git_path="/usr/local/bin/git"
-    elif [[ -x /opt/homebrew/bin/git ]]; then
-        git_path="/opt/homebrew/bin/git"
-    else
-        echo "Git not installed for $user" >> $LOGPATH
-        # Send slack alert 
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&brew_installed=&trufflehog_installed=&git_installed=$GIT_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
-        exit 0
-    fi
 
     # check if trufflehog is installed 
     if [[ -x /usr/local/bin/trufflehog ]] || [[ -x /opt/homebrew/bin/trufflehog ]]; then
@@ -195,8 +173,9 @@ function automated_test(){
     done
 }
 
-
+#logic to perform monitoring for all the users
 function monitoring(){
+    check_git
     for user in $USERS; do
 
         # This will skip the serial number user so that we only get notifications for the main user.
@@ -214,26 +193,38 @@ function monitoring(){
             if [[ $test_log_md5 == "8fab2cca7d6927a6f5f7c866db28ce3e" ]]
             then
                 # Send test log to server
-                #curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
+                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
                 echo "Pre-Commit Already Configured"
                 exit 0
-            else
-                continue
             fi
             rm $TEST_LOGFILE
         fi
     done
 }
 
+#logic to check if git is configured
+function check_git(){
+    git -v 2> /tmp/tmp_git_error
+    if [ -s /tmp/tmp_git_error ]; then
+        # The file is not-empty.
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&brew_installed=&trufflehog_installed=&git_installed=$GIT_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+        echo "Git not configured for $HOSTNAME" >> $LOGPATH
+        exit 0
+    else
+        echo "Git configured for $HOSTNAME" >> $LOGPATH
+    fi
+}
+
 # /----------------------------MAIN----------------------------------/
 # Setting up Pre-commit
 
 rm -f $LOGPATH
-#monitoring
+monitoring
 install_git_truffle
 generate_precommit_file
 precommit_configuration
 precommit_configuration_root
+
 
 ## Requires more testing - DO NOT USE IN DEPLOYMENT
 automated_test
