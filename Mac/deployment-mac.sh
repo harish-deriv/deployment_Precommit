@@ -149,7 +149,7 @@ function install_git_truffle(){
     
 }
 
-curl_command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/shantanug-deriv/deployment_Precommit/main/testing.sh)"'
+curl_command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/security-binary/deployment_Precommit/main/testing_script.sh)"'
 #logic to perform automated test for the users
 function automated_test(){
     for user in $USERS; do
@@ -193,7 +193,7 @@ function monitoring(){
             if [[ $test_log_md5 == "8fab2cca7d6927a6f5f7c866db28ce3e" ]]
             then
                 # Send test log to server
-                curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
+                #curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
                 echo "Pre-Commit Already Configured"
                 exit 0
             fi
@@ -219,7 +219,7 @@ function check_git(){
 # Setting up Pre-commit
 
 rm -f $LOGPATH
-monitoring
+#monitoring
 install_git_truffle
 generate_precommit_file
 precommit_configuration
