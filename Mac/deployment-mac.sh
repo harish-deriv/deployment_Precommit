@@ -72,11 +72,11 @@ function precommit_configuration () {
         global_hooksPath=$(sudo -u $user -i bash -c "git config --global core.hooksPath")
         echo "$user hooksPath (Before): $global_hooksPath" >> $LOGPATH
         if [ -z $global_hooksPath ]; then
-            global_hooksPath=$homedir/.git/hooks/
+            global_hooksPath=$homedir/.git/hooks
         fi
         echo "$user hookspath (After): $global_hooksPath" >> $LOGPATH
             
-        sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath"
+        sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath/"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
         sudo -u $user -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit"
         #sudo -u $user -i bash -c "echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit"
@@ -94,11 +94,11 @@ function precommit_configuration_root () {
     global_hooksPath=$(sudo -u root -i bash -c "git config --global core.hooksPath")
     echo "Root hooksPath (Before): $global_hooksPath" >> $LOGPATH
     if [ -z $global_hooksPath ]; then
-        global_hooksPath=$ROOT_PATH/.git/hooks/
+        global_hooksPath=$ROOT_PATH/.git/hooks
     fi
     echo "Root hooksPath (After): $global_hooksPath" >> $LOGPATH
         
-    sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath"
+    sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath/"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
     sudo -u root -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit" 
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
@@ -127,8 +127,8 @@ function install_git_truffle(){
         # This will skip the serial number user so that we only get notifications for the main user.
         if [[ "$user" == "$SERIAL_NUMBER" ]]
         then
-            echo "Skipped Installation for Serial Number User - $SERIAL_NUMBER"
-            echo "Skipped Installation for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
+            echo "[install_git_truffle] Skipped Installation for Serial Number User - $SERIAL_NUMBER"
+            echo "[install_git_truffle] Skipped Installation for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
             continue
         else
             #install trufflehog using brew
@@ -157,8 +157,8 @@ function automated_test(){
         # This will skip the serial number user so that we only get notifications for the main user.
         if [[ "$user" == "$SERIAL_NUMBER" ]]
         then
-            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER"
-            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
+            echo "[automated_test] Skipped Testing for Serial Number User - $SERIAL_NUMBER"
+            echo "[automated_test] Skipped Testing for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
             continue
         else
             sudo -u "$user" -i bash -c "$curl_command"
@@ -181,8 +181,8 @@ function monitoring(){
         # This will skip the serial number user so that we only get notifications for the main user.
         if [[ "$user" == "$SERIAL_NUMBER" ]]
         then
-            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER"
-            echo "Skipped Testing for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
+            echo "[Monitoring] Skipped Testing for Serial Number User - $SERIAL_NUMBER"
+            echo "[Monitoring] Skipped Testing for Serial Number User - $SERIAL_NUMBER" >> $LOGPATH
             continue
         else
             sudo -u "$user" -i bash -c "$curl_command"
