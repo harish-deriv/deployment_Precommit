@@ -69,14 +69,14 @@ function precommit_configuration () {
         homedir=$BASE_PATH/$user
         echo "/-------Configuring for $homedir-------/" >> $LOGPATH
         
-        global_hooksPath=$(sudo -u $user -i bash -c "$git_path config --global core.hooksPath")
+        global_hooksPath=$(sudo -u $user -i bash -c "git config --global core.hooksPath")
         echo "$user hooksPath (Before): $global_hooksPath" >> $LOGPATH
         if [ -z $global_hooksPath ]; then
             global_hooksPath=$homedir/.git/hooks/
         fi
         echo "$user hookspath (After): $global_hooksPath" >> $LOGPATH
             
-        sudo -u $user -i bash -c "$git_path config --global core.hooksPath $global_hooksPath"
+        sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
         sudo -u $user -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit"
         #sudo -u $user -i bash -c "echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit"
@@ -91,14 +91,14 @@ function precommit_configuration_root () {
     # Root user if in case they use root for commits
     echo "/-------Configuring for root-------/" >> $LOGPATH
 
-    global_hooksPath=$(sudo -u root -i bash -c "$git_path config --global core.hooksPath")
+    global_hooksPath=$(sudo -u root -i bash -c "git config --global core.hooksPath")
     echo "Root hooksPath (Before): $global_hooksPath" >> $LOGPATH
     if [ -z $global_hooksPath ]; then
         global_hooksPath=$ROOT_PATH/.git/hooks/
     fi
     echo "Root hooksPath (After): $global_hooksPath" >> $LOGPATH
         
-    sudo -u root -i bash -c "$git_path config --global core.hooksPath $global_hooksPath"
+    sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
     sudo -u root -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit" 
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
@@ -149,7 +149,7 @@ function install_git_truffle(){
     
 }
 
-curl_command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/shantanug-deriv/deployment_Precommit/main/testing_script_mac.sh)"'
+curl_command='bash -c "$(curl -fsSL https://raw.githubusercontent.com/shantanug-deriv/deployment_Precommit/main/testing.sh)"'
 #logic to perform automated test for the users
 function automated_test(){
     for user in $USERS; do
