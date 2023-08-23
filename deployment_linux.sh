@@ -77,7 +77,7 @@ function test_git_hooks() {
                     echo "Pre-commit hook does not work for user $user"
                     sudo -u "$user" bash -c 'cd /tmp/fake_repo_TEST9; git commit -m "TEST";rm -rf /tmp/fake_repo_TEST9/*'
                     echo "Sending data to server: serial number=$SERIAL_NUMBER, username=$user"
-                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://10.10.24.230:8443/endpoint -k -H "Authorization: token"
+                    curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$user" https://10.10.24.230:8080/endpoint -k -H "Authorization: token"
                 fi
             fi
         fi
@@ -86,7 +86,7 @@ function test_git_hooks() {
     # Test for root user
     if sudo bash -c "git clone '$TEST_REPO_URL' /tmp/fake_repo_TEST9;cd /tmp/fake_repo_TEST9 && touch \'$(openssl rand -hex 16).txt\' && git add . && git commit -m 'test'"; then
         echo "Pre-commit hook does not work for user root"
-        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=root" https://10.10.24.230:8443/endpoint -k -H "Authorization: TOKEN"
+        curl -X POST -d "serial_number=$SERIAL_NUMBER&username=root" https://10.10.24.230:8080/endpoint -k -H "Authorization: TOKEN"
         rm -rf /tmp/fake_repo_TEST9
     else
         trufflehog_exit_code=$?
@@ -97,7 +97,7 @@ function test_git_hooks() {
             echo "Pre-commit hook does not work for user root"
             sudo -u "$user" bash -c 'cd /tmp/fake_repo_TEST9; git commit -m "TEST";rm -rf /tmp/fake_repo_TEST9/*'
             echo "Sending data to server: serial number=$SERIAL_NUMBER, username=root"
-            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=root" https://10.10.24.230:8443/endpoint -k -H "Authorization: TOKEN"
+            curl -X POST -d "serial_number=$SERIAL_NUMBER&username=root" https://10.10.24.230:8080/endpoint -k -H "Authorization: TOKEN"
         fi
     fi
 }
