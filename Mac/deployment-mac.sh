@@ -78,7 +78,6 @@ function precommit_configuration () {
             
         sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath/"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
-        #need to change this from > to >> later
         sudo -u $user -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' >> $global_hooksPath/pre-commit"
         sudo -u $user -i bash -c "chmod +x $global_hooksPath/pre-commit"
         echo "/-------Configuration Completed for $homedir-------/" >> $LOGPATH
