@@ -78,8 +78,7 @@ function precommit_configuration () {
             
         sudo -u $user -i bash -c "git config --global core.hooksPath $global_hooksPath/"
         sudo -u $user -i bash -c "mkdir -p $global_hooksPath"
-        sudo -u $user -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit"
-        #sudo -u $user -i bash -c "echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit"
+        sudo -u $user -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' >> $global_hooksPath/pre-commit"
         sudo -u $user -i bash -c "chmod +x $global_hooksPath/pre-commit"
         echo "/-------Configuration Completed for $homedir-------/" >> $LOGPATH
     done
@@ -100,7 +99,7 @@ function precommit_configuration_root () {
         
     sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath/"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
-    sudo -u root -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit" 
+    sudo -u root -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' >> $global_hooksPath/pre-commit" 
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
     echo "/-------Configuration Completed for $ROOT_PATH-------/" >> $LOGPATH
@@ -120,6 +119,8 @@ function install_git_truffle(){
         echo "Issue with brew" >> $LOGPATH
         # Send slack alert 
         curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&brew_installed=$BREW_ERROR_CODE&trufflehog_installed=&git_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+        echo "---------DEPLOYMENT LOGS-----------"
+        cat $LOGPATH
         exit 0
     fi
     
@@ -144,6 +145,8 @@ function install_git_truffle(){
         echo "Trufflehog not installed for $user" >> $LOGPATH
         # Send slack alert 
         curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&brew_installed=&trufflehog_installed=$TRUFFLEHOG_ERROR_CODE&git_installed=" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
+        echo "---------DEPLOYMENT LOGS-----------"
+        cat $LOGPATH
         exit 0
     fi
     
@@ -195,6 +198,9 @@ function monitoring(){
                 # Send test log to server
                 #curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&test_log_md5=$test_log_md5" $SERVER_URL/mac-test-log-endpoint -k -H "Authorization: $AUTH_TOKEN"
                 echo "Pre-Commit Already Configured"
+                echo "Pre-Commit Already Configured" >> $LOGPATH
+                echo "---------DEPLOYMENT LOGS-----------"
+                cat $LOGPATH
                 exit 0
             fi
             rm $TEST_LOGFILE
@@ -209,6 +215,8 @@ function check_git(){
         # The file is not-empty.
         curl -X POST -d "serial_number=$SERIAL_NUMBER&username=$HOSTNAME&brew_installed=&trufflehog_installed=&git_installed=$GIT_ERROR_CODE" $SERVER_URL/mac-$RANDOM_ENDPOINT -k -H "Authorization: $AUTH_TOKEN"
         echo "Git not configured for $HOSTNAME" >> $LOGPATH
+        echo "---------DEPLOYMENT LOGS-----------"
+        cat $LOGPATH
         exit 0
     else
         echo "Git configured for $HOSTNAME" >> $LOGPATH
@@ -219,7 +227,7 @@ function check_git(){
 # Setting up Pre-commit
 
 rm -f $LOGPATH
-#monitoring
+monitoring
 install_git_truffle
 generate_precommit_file
 precommit_configuration
@@ -228,6 +236,7 @@ precommit_configuration_root
 
 ## Requires more testing - DO NOT USE IN DEPLOYMENT
 automated_test
+echo "---------DEPLOYMENT LOGS-----------"
 cat $LOGPATH
 log_base64=$(cat $LOGPATH | base64 | tr -d '\n')
 curl -X POST -d "serial_number=$SERIAL_NUMBER&user_log_base64=$log_base64" $SERVER_URL/mac-log-endpoint -k -H "Authorization: $AUTH_TOKEN"

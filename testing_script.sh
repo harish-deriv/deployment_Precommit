@@ -73,4 +73,6 @@ invoke_test_4
 invoke_test_5
 
 rm -rf /tmp/fake_repo_TEST9
+
+echo "___________________TESTING RESULTS___________________"
 cat $TEST_LOGFILE
