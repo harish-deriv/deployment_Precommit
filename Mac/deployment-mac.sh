@@ -99,7 +99,7 @@ function precommit_configuration_root () {
         
     sudo -u root -i bash -c "git config --global core.hooksPath $global_hooksPath/"
     sudo -u root -i bash -c "mkdir -p $global_hooksPath"
-    sudo -u root -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' > $global_hooksPath/pre-commit" 
+    sudo -u root -i bash -c "grep -qxF '/bin/bash /opt/skel/.git/hooks/pre-commit' $global_hooksPath/pre-commit || echo -e '\n/bin/bash /opt/skel/.git/hooks/pre-commit' >> $global_hooksPath/pre-commit" 
     sudo -u root -i bash -c "chmod +x $global_hooksPath/pre-commit"
 
     echo "/-------Configuration Completed for $ROOT_PATH-------/" >> $LOGPATH
