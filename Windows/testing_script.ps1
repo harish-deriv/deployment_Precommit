@@ -13,7 +13,7 @@ function _log($message) {
 }
 
 function Invoke-Test1 {
-    New-Item -ItemType File -Name "newcreds" | Out-Null
+    New-Item -ItemType File -Name "newcreds" -Force | Out-Null
     git add .
     git commit -m "test1"
     if ($? -eq $false) {
@@ -24,7 +24,7 @@ function Invoke-Test1 {
 }
 
 function Invoke-Test2 {
-    Copy-Item "creds" -Destination "newcreds"
+    Copy-Item "creds" -Destination "newcreds" -Force
     git add .
     git commit -m "test2"
     if ($? -eq $false) {
@@ -45,7 +45,7 @@ function Invoke-Test3 {
 
 function Invoke-Test4 {
     Get-Content "newcreds" | Add-Content "creds"
-    Remove-Item "newcreds"
+    Remove-Item "newcreds" -Force
     git add .
     git commit -m "Test4"
     if ($? -eq $false) {
@@ -78,4 +78,4 @@ Remove-Item -Recurse -Force "$TMP_DIR\fake_repo_TEST9" | Out-Null
 
 Write-Host "___________________TESTING RESULTS___________________"
 Get-Content $TEST_LOGFILE
-Remove-Item $TEST_LOGFILE
+Remove-Item $TEST_LOGFILE -Force
