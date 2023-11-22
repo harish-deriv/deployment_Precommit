@@ -10,13 +10,13 @@ $lastCommit = git log -1 2>$null
 
 if ($lastCommit) {
     # Git repo has commits
-    trufflehog git file://. --no-update --since-commit HEAD --fail > "$TMP_DIR\trufflehog_output_$($env:USERNAME)" 2>$null
+    & 'C:\Program Files\trufflehog\trufflehog.exe' git file://. --no-update --since-commit HEAD --fail > "$TMP_DIR\trufflehog_output_$($env:USERNAME)" 2>$null
     $trufflehog_exit_code = $LASTEXITCODE
     $trufflehog_exit_code | Out-File -FilePath "$TMP_DIR\trufflehog_exit_code_$($env:USERNAME)"
 }
 else {
     # Git repo is empty
-    trufflehog filesystem . --no-update --fail > "$TMP_DIR\trufflehog_output_$($env:USERNAME)" 2>$null
+    & 'C:\Program Files\trufflehog\trufflehog.exe' filesystem . --no-update --fail > "$TMP_DIR\trufflehog_output_$($env:USERNAME)" 2>$null
     $trufflehog_exit_code = $LASTEXITCODE
     $trufflehog_exit_code | Out-File -FilePath "$TMP_DIR\trufflehog_exit_code_$($env:USERNAME)"
 }
