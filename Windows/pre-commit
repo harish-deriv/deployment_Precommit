@@ -1,3 +1,3 @@
 #!/bin/sh
-echo "Executing Powershell Script"
+echo "Executing Pre-Commit Powershell Script"
 powershell.exe -ExecutionPolicy RemoteSigned -File 'C:\.git\hooks\pre-commit.ps1'
