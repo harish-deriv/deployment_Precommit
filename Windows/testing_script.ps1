@@ -1,8 +1,9 @@
-$TEST_LOGFILE = "C:\tmp\precommit_test.log"
+$TMP_DIR = "C:\Windows\Temp\pre-commit-data"
+$TEST_LOGFILE = "$TMP_DIR\precommit_test.log"
 $TEST_GIT_REPO = "https://github.com/harish-deriv/fake_repo_TEST9"
 
-if (!(Test-Path -Path "C:\Windows\Temp\pre-commit-data" -PathType "Container")){
-    mkdir "C:\Windows\Temp\pre-commit-data" 1>$null
+if (!(Test-Path -Path "$TMP_DIR" -PathType "Container")){
+    mkdir "$TMP_DIR" 1>$null
     Write-Host "Tmp Directory Created"
 }
 
@@ -63,9 +64,9 @@ function Invoke-Test5 {
     }
 }
 
-Set-Location "C:\Windows\Temp\pre-commit-data"
+Set-Location "$TMP_DIR"
 git clone $TEST_GIT_REPO
-Set-Location "C:\Windows\Temp\pre-commit-data\fake_repo_TEST9"
+Set-Location "$TMP_DIR\fake_repo_TEST9"
 
 Invoke-Test1
 Invoke-Test2
@@ -73,7 +74,7 @@ Invoke-Test3
 Invoke-Test4
 Invoke-Test5
 Set-Location "C:\"
-Remove-Item -Recurse -Force "C:\Windows\Temp\pre-commit-data\fake_repo_TEST9" | Out-Null
+Remove-Item -Recurse -Force "$TMP_DIR\fake_repo_TEST9" | Out-Null
 
 Write-Host "___________________TESTING RESULTS___________________"
 Get-Content $TEST_LOGFILE
