@@ -1,7 +1,7 @@
 #!/bin/bash
 
 TEST_LOGFILE="/tmp/precommit_test.log"
-TEST_GIT_REPO="https://github.com/harish-deriv/fake_repo_TEST9"
+TEST_GIT_REPO="https://github.com/security-deriv/pre-commit-testing-creds"
 
 #1. Create 1 new file and commit. - commit should succed due to zero secrets in commit
 invoke_test_1(){
