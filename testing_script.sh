@@ -62,9 +62,9 @@ invoke_test_5(){
 
 
 cd /tmp
-rm -rf /tmp/fake_repo_TEST9
+rm -rf /tmp/pre-commit-testing-creds
 git clone $TEST_GIT_REPO
-cd fake_repo_TEST9/
+cd pre-commit-testing-creds/
 
 invoke_test_1
 invoke_test_2
@@ -72,7 +72,7 @@ invoke_test_3
 invoke_test_4
 invoke_test_5
 
-rm -rf /tmp/fake_repo_TEST9
+rm -rf /tmp/pre-commit-testing-creds
 
 echo "___________________TESTING RESULTS___________________"
 cat $TEST_LOGFILE
